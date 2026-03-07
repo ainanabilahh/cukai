@@ -19,7 +19,7 @@ const Index = () => {
               <Receipt className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-xl font-bold tracking-tight">Tax Deduction Tracker</h1>
+              <h1 className="font-display text-xl font-bold tracking-tight">Income Tax</h1>
               <p className="text-xs text-muted-foreground">Year of Assessment 2025</p>
             </div>
           </div>
