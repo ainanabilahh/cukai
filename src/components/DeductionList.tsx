@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
-import { Trash2, ImageIcon, Eye, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, ImageIcon, Eye, Paperclip, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,9 +11,10 @@ import { toast } from "sonner";
 interface Props {
   deductions: Deduction[];
   onDelete: (id: string) => void;
+  onAttachReceipt?: (id: string, receiptFileName: string) => void;
 }
 
-export function DeductionList({ deductions, onDelete }: Props) {
+export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) {
   const fileStorage = useFileStorageContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string; deduction: Deduction } | null>(null);
