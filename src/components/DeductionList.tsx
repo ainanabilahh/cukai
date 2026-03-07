@@ -61,7 +61,11 @@ export function DeductionList({ deductions, onDelete }: Props) {
             <DialogTitle className="font-display">Receipt</DialogTitle>
           </DialogHeader>
           {viewingReceipt && (
-            <img src={viewingReceipt} alt="Receipt" className="w-full rounded-lg" />
+            viewingReceipt.startsWith("data:application/pdf") ? (
+              <iframe src={viewingReceipt} className="w-full h-[70vh] rounded-lg" title="Receipt PDF" />
+            ) : (
+              <img src={viewingReceipt} alt="Receipt" className="w-full rounded-lg" />
+            )
           )}
         </DialogContent>
       </Dialog>
