@@ -60,6 +60,38 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
     a.click();
   };
 
+  const ensureStorage = async (): Promise<boolean> => {
+    if (!fileStorage.isSupported) return false;
+    if (fileStorage.isReady) return true;
+    toast.info("Please choose a folder to save your files");
+    return await fileStorage.pickDirectory();
+  };
+
+  const handleAttachReceipt = async (deduction: Deduction, file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      toast.error("Please upload an image or PDF file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File must be under 10MB");
+      return;
+    }
+    const storageReady = await ensureStorage();
+    if (storageReady) {
+      const ext = isImage ? "jpg" : "pdf";
+      const fileName = `receipt-${deduction.id}.${ext}`;
+      const saved = await fileStorage.saveFile(fileName, file);
+      if (!saved) {
+        toast.error("Failed to save receipt");
+        return;
+      }
+      onAttachReceipt?.(deduction.id, fileName);
+      toast.success("Receipt attached!");
+    }
+  };
+
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
   };
