@@ -28,8 +28,9 @@ export function DeductionList({ deductions, onDelete }: Props) {
         {deductions.map((d) => (
           <div key={d.id} className="flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:bg-secondary/50">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Badge variant="secondary" className="text-xs font-medium">{d.category}</Badge>
+                <Badge variant="outline" className="text-xs">{d.frequency === "monthly" ? d.month : "Yearly"}</Badge>
                 <span className="text-xs text-muted-foreground">{d.date}</span>
                 {d.receiptImage && (
                   <button

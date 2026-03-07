@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Upload, X, Image as ImageIcon, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory } from "@/lib/deduction-data";
+import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory, DeductionFrequency, MONTHS } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { toast } from "sonner";
 
 interface Props {
-  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImage?: string }) => void;
+  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImage?: string; frequency: DeductionFrequency; month?: string }) => void;
 }
 
 function compressImage(file: File, maxWidth = 800): Promise<string> {
@@ -46,6 +46,8 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const [description, setDescription] = useState("");
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [frequency, setFrequency] = useState<DeductionFrequency>("yearly");
+  const [month, setMonth] = useState<string>("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -93,17 +95,24 @@ export function AddDeductionDialog({ onAdd }: Props) {
       toast.error("Please enter a description");
       return;
     }
+    if (frequency === "monthly" && !month) {
+      toast.error("Please select a month");
+      return;
+    }
     onAdd({
       category,
       amount: num,
       date: format(date, "yyyy-MM-dd"),
       description: description.trim(),
       receiptImage: receiptImage || undefined,
+      frequency,
+      month: frequency === "monthly" ? month : undefined,
     });
     toast.success("Deduction added successfully!");
     setAmount("");
     setDescription("");
     setReceiptImage(null);
+    setMonth("");
     setOpen(false);
   };
 
@@ -181,6 +190,30 @@ export function AddDeductionDialog({ onAdd }: Props) {
               </SelectContent>
             </Select>
           </div>
+          {/* Frequency */}
+          <div className="space-y-2">
+            <Label>Frequency</Label>
+            <Select value={frequency} onValueChange={(v) => setFrequency(v as DeductionFrequency)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="yearly">Yearly (annual statement)</SelectItem>
+                <SelectItem value="monthly">Monthly (per month proof)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {frequency === "monthly" && (
+            <div className="space-y-2">
+              <Label>Month</Label>
+              <Select value={month} onValueChange={setMonth}>
+                <SelectTrigger><SelectValue placeholder="Select month" /></SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Amount (RM)</Label>
             <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
