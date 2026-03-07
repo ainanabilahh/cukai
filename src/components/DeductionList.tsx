@@ -202,7 +202,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
                   <Separator />
 
                   <div className="flex items-center gap-2">
-                    {d.receiptImage && (
+                    {d.receiptImage ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -212,9 +212,26 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
                           handleViewReceipt(d);
                         }}
                       >
-                        <ImageIcon className="h-3.5 w-3.5" />
+                        <Eye className="h-3.5 w-3.5" />
                         View Receipt
                       </Button>
+                    ) : (
+                      <label className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          Attach Receipt
+                        </Button>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAttachReceipt(d, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
                     )}
                     <div className="flex-1" />
                     <Button
