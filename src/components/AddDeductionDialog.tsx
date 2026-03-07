@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Upload, X, Image as ImageIcon, FileText } from "lucide-react";
+import { CalendarIcon, Plus, Upload, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory, DeductionFrequency, MONTHS } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
 
 interface Props {
@@ -17,36 +18,16 @@ interface Props {
   checkDuplicate?: (d: { category: string; amount: number; date: string; description: string }) => boolean;
 }
 
-function compressImage(file: File, maxWidth = 800): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ratio = Math.min(maxWidth / img.width, 1);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.6));
-      };
-      img.onerror = reject;
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
+  const fileStorage = useFileStorageContext();
   const [open, setOpen] = useState(false);
   const [showDupeWarning, setShowDupeWarning] = useState(false);
   const [category, setCategory] = useState<DeductionCategory>("Lifestyle");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
-  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [frequency, setFrequency] = useState<DeductionFrequency>("yearly");
   const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
@@ -54,6 +35,13 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   const handleDateChange = (d: Date) => {
     setDate(d);
     setMonth(MONTHS[d.getMonth()]);
+  };
+
+  const ensureStorage = async (): Promise<boolean> => {
+    if (!fileStorage.isSupported) return false;
+    if (fileStorage.isReady) return true;
+    toast.info("Please choose a folder to save your files");
+    return await fileStorage.pickDirectory();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -69,44 +57,52 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       toast.error("File must be under 10MB");
       return;
     }
-    setUploading(true);
-    try {
-      if (isImage) {
-        const compressed = await compressImage(file);
-        setReceiptImage(compressed);
-      } else {
-        // Store PDF as base64 data URL
-        const dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        setReceiptImage(dataUrl);
-      }
-      toast.success("Receipt uploaded!");
-    } catch {
-      toast.error("Failed to process file");
-    } finally {
-      setUploading(false);
+    setReceiptFile(file);
+    if (isImage) {
+      setReceiptPreview(URL.createObjectURL(file));
+    } else {
+      setReceiptPreview("pdf");
     }
+    toast.success("Receipt attached!");
   };
 
-  const doSubmit = () => {
+  const clearReceipt = () => {
+    if (receiptPreview && receiptPreview !== "pdf") URL.revokeObjectURL(receiptPreview);
+    setReceiptFile(null);
+    setReceiptPreview(null);
+  };
+
+  const doSubmit = async () => {
     const num = parseFloat(amount);
+    let receiptFileName: string | undefined;
+
+    if (receiptFile) {
+      const storageReady = await ensureStorage();
+      if (storageReady) {
+        const id = crypto.randomUUID();
+        const ext = receiptFile.type.startsWith("image/") ? "jpg" : "pdf";
+        receiptFileName = `receipt-${id}.${ext}`;
+        const saved = await fileStorage.saveFile(receiptFileName, receiptFile);
+        if (!saved) {
+          toast.error("Failed to save receipt to folder");
+          return;
+        }
+      }
+    }
+
     onAdd({
       category,
       amount: num,
       date: format(date, "yyyy-MM-dd"),
       description: description.trim(),
-      receiptImage: receiptImage || undefined,
+      receiptImage: receiptFileName,
       frequency,
       month: frequency === "monthly" ? month : undefined,
     });
     toast.success("Deduction added successfully!");
     setAmount("");
     setDescription("");
-    setReceiptImage(null);
+    clearReceipt();
     setMonth("");
     setShowDupeWarning(false);
     setOpen(false);
@@ -126,7 +122,6 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       toast.error("Please select a month");
       return;
     }
-    // Duplicate check
     if (checkDuplicate && checkDuplicate({ category, amount: num, date: format(date, "yyyy-MM-dd"), description: description.trim() })) {
       setShowDupeWarning(true);
       return;
@@ -135,7 +130,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) clearReceipt(); }}>
       <DialogTrigger asChild>
         <Button className="gap-2 font-display font-semibold">
           <Plus className="h-4 w-4" />
@@ -150,21 +145,21 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           {/* Receipt Upload */}
           <div className="space-y-2">
             <Label>Receipt (optional)</Label>
-            {receiptImage ? (
+            {receiptPreview ? (
               <div className="relative rounded-lg border overflow-hidden">
-                {receiptImage.startsWith("data:application/pdf") ? (
+                {receiptPreview === "pdf" ? (
                   <div className="flex items-center gap-2 p-4 bg-muted">
                     <FileText className="h-8 w-8 text-primary" />
                     <span className="text-sm font-medium">PDF Receipt attached</span>
                   </div>
                 ) : (
-                  <img src={receiptImage} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
+                  <img src={receiptPreview} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
                 )}
                 <Button
                   variant="destructive"
                   size="icon"
                   className="absolute top-2 right-2 h-7 w-7"
-                  onClick={() => setReceiptImage(null)}
+                  onClick={clearReceipt}
                 >
                   <X className="h-4 w-4" />
                 </Button>
