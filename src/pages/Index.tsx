@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Receipt, TrendingUp, Layers } from "lucide-react";
+import { Receipt, TrendingUp, Layers, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
