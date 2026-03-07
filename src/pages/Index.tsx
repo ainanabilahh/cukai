@@ -98,6 +98,10 @@ const Index = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DataImportExport deductions={deductions} year={selectedYear} onImport={importDeductions} />
             <PrintSummary deductions={deductions} totalByCategory={totalByCategory} total={total} year={selectedYear} />
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/charts?year=${selectedYear}`)}>
+              <BarChart3 className="h-4 w-4" />
+              View Charts
+            </Button>
           </div>
         </div>
 
