@@ -104,14 +104,30 @@ export function useFileStorage() {
     return dirHandle;
   }, [dirHandle]);
 
-  const saveFile = useCallback(async (fileName: string, data: Blob | string): Promise<boolean> => {
+  // Navigate to a subdirectory, creating folders as needed
+  const getSubdirectory = useCallback(async (rootHandle: FileSystemDirectoryHandle, path: string): Promise<FileSystemDirectoryHandle> => {
+    const parts = path.split("/").filter(Boolean);
+    let current = rootHandle;
+    for (const part of parts) {
+      current = await current.getDirectoryHandle(part, { create: true });
+    }
+    return current;
+  }, []);
+
+  const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
     const handle = await ensurePermission();
     if (!handle) return false;
     try {
-      const fileHandle = await handle.getFileHandle(fileName, { create: true });
+      // Support paths like "2025/receipts/umobile/receipt-xxx.jpg"
+      const parts = filePath.split("/");
+      const fileName = parts.pop()!;
+      let targetDir = handle;
+      if (parts.length > 0) {
+        targetDir = await getSubdirectory(handle, parts.join("/"));
+      }
+      const fileHandle = await targetDir.getFileHandle(fileName, { create: true });
       const writable = await fileHandle.createWritable();
       if (typeof data === "string") {
-        // Convert base64 data URL to blob
         const response = await fetch(data);
         const blob = await response.blob();
         await writable.write(blob);
@@ -124,30 +140,42 @@ export function useFileStorage() {
       console.error("Save file error:", err);
       return false;
     }
-  }, [ensurePermission]);
+  }, [ensurePermission, getSubdirectory]);
 
-  const readFile = useCallback(async (fileName: string): Promise<string | null> => {
+  const readFile = useCallback(async (filePath: string): Promise<string | null> => {
     const handle = await ensurePermission();
     if (!handle) return null;
     try {
-      const fileHandle = await handle.getFileHandle(fileName);
+      const parts = filePath.split("/");
+      const fileName = parts.pop()!;
+      let targetDir = handle;
+      if (parts.length > 0) {
+        targetDir = await getSubdirectory(handle, parts.join("/"));
+      }
+      const fileHandle = await targetDir.getFileHandle(fileName);
       const file = await fileHandle.getFile();
       return URL.createObjectURL(file);
     } catch {
       return null;
     }
-  }, [ensurePermission]);
+  }, [ensurePermission, getSubdirectory]);
 
-  const deleteFile = useCallback(async (fileName: string): Promise<boolean> => {
+  const deleteFile = useCallback(async (filePath: string): Promise<boolean> => {
     const handle = await ensurePermission();
     if (!handle) return false;
     try {
-      await handle.removeEntry(fileName);
+      const parts = filePath.split("/");
+      const fileName = parts.pop()!;
+      let targetDir = handle;
+      if (parts.length > 0) {
+        targetDir = await getSubdirectory(handle, parts.join("/"));
+      }
+      await targetDir.removeEntry(fileName);
       return true;
     } catch {
       return false;
     }
-  }, [ensurePermission]);
+  }, [ensurePermission, getSubdirectory]);
 
   const changeDirectory = useCallback(async (): Promise<boolean> => {
     return pickDirectory();
