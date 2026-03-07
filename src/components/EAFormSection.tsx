@@ -120,7 +120,15 @@ export function EAFormSection() {
                 onChange={(e) => setEmployerName(e.target.value)}
               />
             </div>
-            <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50">
+            <label
+              className={`flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50 ${!employerName.trim() ? "opacity-60" : ""}`}
+              onClick={(e) => {
+                if (!employerName.trim()) {
+                  e.preventDefault();
+                  toast.error("Please enter employer name first");
+                }
+              }}
+            >
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                 {uploading ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -136,7 +144,7 @@ export function EAFormSection() {
                 accept="image/*,application/pdf"
                 className="hidden"
                 onChange={handleUpload}
-                disabled={uploading || !employerName.trim()}
+                disabled={uploading}
               />
             </label>
           </div>
