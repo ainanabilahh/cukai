@@ -228,7 +228,7 @@ export function useFileStorage() {
           const base = await getBaseDir();
           bytes = await tauriReadFile(`files/${filePath}`, { baseDir: base });
         }
-        return URL.createObjectURL(new Blob([bytes], { type: mime }));
+        return URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer as ArrayBuffer)], { type: mime }));
       } catch { return null; }
     } else {
       if (!browserHandle) return null;
