@@ -205,7 +205,7 @@ export function useFileStorage() {
         for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
         const fh = await dir.getFileHandle(fileName, { create: true });
         const writable = await fh.createWritable();
-        await writable.write(new Blob([bytes]));
+        await writable.write(new Blob([bytes.buffer as ArrayBuffer]));
         await writable.close();
         return true;
       } catch (err) { console.error("saveFile browser error:", err); return false; }
