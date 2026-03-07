@@ -4,6 +4,7 @@ import { useDeductions } from "@/hooks/useDeductions";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
 import { DeductionList } from "@/components/DeductionList";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
+import { EAFormSection } from "@/components/EAFormSection";
 
 const Index = () => {
   const { deductions, addDeduction, deleteDeduction, total, totalByCategory, categoryData } = useDeductions();
@@ -63,6 +64,9 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* EA Forms Section */}
+        <EAFormSection />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
