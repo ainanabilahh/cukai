@@ -2,7 +2,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Upload, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory, DeductionFrequency, MONTHS } from "@/lib/deduction-data";
+import { CATEGORIES, CATEGORY_GROUPS, CATEGORY_NOTES, DeductionCategory, DeductionFrequency, MONTHS } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -247,6 +247,11 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {CATEGORY_NOTES[category] && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 leading-relaxed">
+                💡 {CATEGORY_NOTES[category]}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Frequency <span className="text-destructive">*</span></Label>
