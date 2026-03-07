@@ -113,7 +113,7 @@ const Index = () => {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Deductions</p>
+                <p className="text-sm text-muted-foreground">Total Claims</p>
                 <p className="font-display text-2xl font-bold">RM {total.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</p>
               </div>
             </CardContent>
@@ -157,7 +157,7 @@ const Index = () => {
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display">Deduction List</CardTitle>
+                <CardTitle className="font-display">Claim List</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <DeductionFilters

@@ -172,12 +172,12 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       <DialogTrigger asChild>
         <Button className="gap-2 font-display font-semibold">
           <Plus className="h-4 w-4" />
-          Add Deduction
+          Add Claim
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Add Tax Deduction</DialogTitle>
+          <DialogTitle className="font-display text-xl">Add Tax Claim</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           {/* Receipt Upload */}
