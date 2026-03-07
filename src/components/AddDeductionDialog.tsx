@@ -14,6 +14,7 @@ import { toast } from "sonner";
 
 interface Props {
   onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImage?: string; frequency: DeductionFrequency; month?: string }) => void;
+  checkDuplicate?: (d: { category: string; amount: number; date: string; description: string }) => boolean;
 }
 
 function compressImage(file: File, maxWidth = 800): Promise<string> {
@@ -38,8 +39,9 @@ function compressImage(file: File, maxWidth = 800): Promise<string> {
   });
 }
 
-export function AddDeductionDialog({ onAdd }: Props) {
+export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   const [open, setOpen] = useState(false);
+  const [showDupeWarning, setShowDupeWarning] = useState(false);
   const [category, setCategory] = useState<DeductionCategory>("Lifestyle");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
@@ -90,20 +92,8 @@ export function AddDeductionDialog({ onAdd }: Props) {
     }
   };
 
-  const handleSubmit = () => {
+  const doSubmit = () => {
     const num = parseFloat(amount);
-    if (!num || num <= 0) {
-      toast.error("Please enter a valid amount");
-      return;
-    }
-    if (!description.trim()) {
-      toast.error("Please enter a description");
-      return;
-    }
-    if (frequency === "monthly" && !month) {
-      toast.error("Please select a month");
-      return;
-    }
     onAdd({
       category,
       amount: num,
@@ -118,7 +108,30 @@ export function AddDeductionDialog({ onAdd }: Props) {
     setDescription("");
     setReceiptImage(null);
     setMonth("");
+    setShowDupeWarning(false);
     setOpen(false);
+  };
+
+  const handleSubmit = () => {
+    const num = parseFloat(amount);
+    if (!num || num <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+    if (!description.trim()) {
+      toast.error("Please enter a description");
+      return;
+    }
+    if (frequency === "monthly" && !month) {
+      toast.error("Please select a month");
+      return;
+    }
+    // Duplicate check
+    if (checkDuplicate && checkDuplicate({ category, amount: num, date: format(date, "yyyy-MM-dd"), description: description.trim() })) {
+      setShowDupeWarning(true);
+      return;
+    }
+    doSubmit();
   };
 
   return (
@@ -241,6 +254,16 @@ export function AddDeductionDialog({ onAdd }: Props) {
             <Label>Description</Label>
             <Input placeholder="e.g. Pharmacy medicine" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
+          {showDupeWarning && (
+            <div className="rounded-lg border border-warning bg-warning/10 p-3 space-y-2">
+              <p className="text-sm font-medium text-warning">⚠ Possible duplicate detected</p>
+              <p className="text-xs text-muted-foreground">A deduction with the same category, amount, date, and description already exists.</p>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={() => setShowDupeWarning(false)}>Cancel</Button>
+                <Button size="sm" onClick={doSubmit}>Add Anyway</Button>
+              </div>
+            </div>
+          )}
           <Button onClick={handleSubmit} className="w-full font-display font-semibold">Save</Button>
         </div>
       </DialogContent>
