@@ -6,20 +6,23 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { ReceiptFolderDialog } from "@/components/ReceiptFolderDialog";
 import { toast } from "sonner";
 
 interface Props {
   deductions: Deduction[];
   onDelete: (id: string) => void;
   onAttachReceipt?: (id: string, receiptFileName: string) => void;
+  year: number;
 }
 
-export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) {
+export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: Props) {
   const fileStorage = useFileStorageContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<{ urls: { url: string; type: string }[]; currentIndex: number; deduction: Deduction } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [pendingReceipt, setPendingReceipt] = useState<{ deduction: Deduction; file: File } | null>(null);
 
   const resolveReceiptUrl = async (fileName: string): Promise<{ url: string; type: string } | null> => {
     if (fileName.startsWith("data:")) {
@@ -102,18 +105,10 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
       return;
     }
 
-    // Try saving to file system storage first
+    // Try file system storage - show folder dialog
     const storageReady = await ensureStorage();
     if (storageReady) {
-      const ext = isImage ? "jpg" : "pdf";
-      const fileName = `receipt-${crypto.randomUUID()}.${ext}`;
-      const saved = await fileStorage.saveFile(fileName, file);
-      if (!saved) {
-        toast.error("Failed to save receipt");
-        return;
-      }
-      onAttachReceipt?.(deduction.id, fileName);
-      toast.success("Receipt attached!");
+      setPendingReceipt({ deduction, file });
       return;
     }
 
@@ -126,6 +121,23 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
     };
     reader.onerror = () => toast.error("Failed to read file");
     reader.readAsDataURL(file);
+  };
+
+  const handleFolderConfirm = async (folderName: string) => {
+    if (!pendingReceipt) return;
+    const { deduction, file } = pendingReceipt;
+    const isImage = file.type.startsWith("image/");
+    const ext = isImage ? "jpg" : "pdf";
+    const receiptFileName = `receipt-${crypto.randomUUID()}.${ext}`;
+    const fullPath = `${year}/receipts/${folderName}/${receiptFileName}`;
+    const saved = await fileStorage.saveFile(fullPath, file);
+    if (!saved) {
+      toast.error("Failed to save receipt");
+      return;
+    }
+    onAttachReceipt?.(deduction.id, fullPath);
+    toast.success("Receipt attached!");
+    setPendingReceipt(null);
   };
 
   const toggleExpand = (id: string) => {
