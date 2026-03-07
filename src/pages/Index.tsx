@@ -13,6 +13,7 @@ import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
 import { DashboardCharts } from "@/components/DashboardCharts";
 import { TaxCalculator } from "@/components/TaxCalculator";
+import { BEFormSection } from "@/components/BEFormSection";
 import { DataImportExport } from "@/components/DataImportExport";
 import { PrintSummary } from "@/components/PrintSummary";
 
@@ -133,8 +134,12 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* EA Forms Section */}
-        <EAFormSection />
+
+        {/* Forms */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          <EAFormSection />
+          <BEFormSection year={selectedYear} />
+        </div>
 
         {/* Tax Calculator */}
         <TaxCalculator totalDeductions={total} zakatAmount={zakatAmount} />
