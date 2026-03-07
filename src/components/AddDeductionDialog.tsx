@@ -109,6 +109,10 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   const handleSubmit = () => {
+    if (!receiptFile) {
+      toast.error("Please upload a receipt");
+      return;
+    }
     const num = parseFloat(amount);
     if (!num || num <= 0) {
       toast.error("Please enter a valid amount");
@@ -144,7 +148,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
         <div className="space-y-4 pt-2">
           {/* Receipt Upload */}
           <div className="space-y-2">
-            <Label>Receipt (optional)</Label>
+            <Label>Receipt <span className="text-destructive">*</span></Label>
             {receiptPreview ? (
               <div className="relative rounded-lg border overflow-hidden">
                 {receiptPreview === "pdf" ? (
