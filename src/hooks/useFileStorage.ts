@@ -49,9 +49,9 @@ async function clearHandle(): Promise<void> {
 }
 
 async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
-  const opts: FileSystemHandlePermissionDescriptor = { mode: "readwrite" };
-  if ((await handle.queryPermission(opts)) === "granted") return true;
-  if ((await handle.requestPermission(opts)) === "granted") return true;
+  const opts = { mode: "readwrite" as const };
+  if ((await (handle as any).queryPermission(opts)) === "granted") return true;
+  if ((await (handle as any).requestPermission(opts)) === "granted") return true;
   return false;
 }
 
