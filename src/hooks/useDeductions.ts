@@ -51,6 +51,25 @@ export function useDeductions(year: number) {
     });
   }, [year]);
 
+  const importDeductions = useCallback((items: Omit<Deduction, "id">[]) => {
+    setDeductions((prev) => {
+      const newOnes = items.map((item) => ({ ...item, id: crypto.randomUUID() }));
+      const updated = [...newOnes, ...prev];
+      saveDeductions(year, updated);
+      return updated;
+    });
+  }, [year]);
+
+  const checkDuplicate = useCallback((deduction: { category: string; amount: number; date: string; description: string }) => {
+    return deductions.some(
+      (d) =>
+        d.category === deduction.category &&
+        d.amount === deduction.amount &&
+        d.date === deduction.date &&
+        d.description.toLowerCase() === deduction.description.toLowerCase()
+    );
+  }, [deductions]);
+
   const deleteDeduction = useCallback((id: string) => {
     setDeductions((prev) => {
       const updated = prev.filter((d) => d.id !== id);
@@ -93,6 +112,8 @@ export function useDeductions(year: number) {
     deductions,
     filteredDeductions,
     addDeduction,
+    importDeductions,
+    checkDuplicate,
     deleteDeduction,
     total,
     totalByCategory,
