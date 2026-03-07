@@ -136,7 +136,7 @@ export interface Deduction {
   amount: number;
   date: string;
   description: string;
-  receiptImage?: string;
+  receiptImages?: string[];
   frequency: DeductionFrequency;
   month?: string; // only for monthly
 }

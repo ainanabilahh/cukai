@@ -169,7 +169,11 @@ const Index = () => {
                 <DeductionList
                   deductions={filteredDeductions}
                   onDelete={deleteDeduction}
-                  onAttachReceipt={(id, fileName) => updateDeduction(id, { receiptImage: fileName })}
+                  onAttachReceipt={(id, fileName) => {
+                    const existing = deductions.find(d => d.id === id);
+                    const current = existing?.receiptImages || [];
+                    updateDeduction(id, { receiptImages: [...current, fileName] });
+                  }}
                 />
               </CardContent>
             </Card>
