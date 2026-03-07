@@ -133,7 +133,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       frequency,
       month: frequency === "monthly" ? month : undefined,
     });
-    toast.success("Deduction added successfully!");
+    toast.success("Claim added successfully!");
     setAmount("");
     setDescription("");
     clearAllReceipts();
@@ -301,7 +301,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           {showDupeWarning && (
             <div className="rounded-lg border border-warning bg-warning/10 p-3 space-y-2">
               <p className="text-sm font-medium text-warning">⚠ Possible duplicate detected</p>
-              <p className="text-xs text-muted-foreground">A deduction with the same category, amount, date, and description already exists.</p>
+              <p className="text-xs text-muted-foreground">A claim with the same category, amount, date, and description already exists.</p>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setShowDupeWarning(false)}>Cancel</Button>
                 <Button size="sm" onClick={doSubmit}>Add Anyway</Button>
