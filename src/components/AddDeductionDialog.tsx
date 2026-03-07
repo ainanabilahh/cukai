@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Upload, X, Image as ImageIcon } from "lucide-react";
+import { CalendarIcon, Plus, Upload, X, Image as ImageIcon, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
@@ -125,7 +125,14 @@ export function AddDeductionDialog({ onAdd }: Props) {
             <Label>Receipt (optional)</Label>
             {receiptImage ? (
               <div className="relative rounded-lg border overflow-hidden">
-                <img src={receiptImage} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
+                {receiptImage.startsWith("data:application/pdf") ? (
+                  <div className="flex items-center gap-2 p-4 bg-muted">
+                    <FileText className="h-8 w-8 text-primary" />
+                    <span className="text-sm font-medium">PDF Receipt attached</span>
+                  </div>
+                ) : (
+                  <img src={receiptImage} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
+                )}
                 <Button
                   variant="destructive"
                   size="icon"
@@ -145,11 +152,11 @@ export function AddDeductionDialog({ onAdd }: Props) {
                   )}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {uploading ? "Processing..." : "Click to upload receipt image"}
+                  {uploading ? "Processing..." : "Click to upload receipt (image or PDF)"}
                 </span>
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf"
                   className="hidden"
                   onChange={handleFileChange}
                   disabled={uploading}
