@@ -381,6 +381,17 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
           )}
         </DialogContent>
       </Dialog>
+
+      {pendingReceipt && (
+        <ReceiptFolderDialog
+          open={!!pendingReceipt}
+          onClose={() => setPendingReceipt(null)}
+          onConfirm={handleFolderConfirm}
+          defaultFolderName={pendingReceipt.deduction.description}
+          fileName={`receipt-preview.${pendingReceipt.file.type.startsWith("image/") ? "jpg" : "pdf"}`}
+          year={year}
+        />
+      )}
     </>
   );
 }
