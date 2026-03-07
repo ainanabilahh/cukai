@@ -188,7 +188,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>Category</Label>
+            <Label>Category <span className="text-destructive">*</span></Label>
             <Select value={category} onValueChange={(v) => setCategory(v as DeductionCategory)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent className="max-h-72">
@@ -205,7 +205,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           </div>
           {/* Frequency */}
           <div className="space-y-2">
-            <Label>Frequency</Label>
+            <Label>Frequency <span className="text-destructive">*</span></Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as DeductionFrequency)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -215,11 +215,11 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Amount (RM)</Label>
+            <Label>Amount (RM) <span className="text-destructive">*</span></Label>
             <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
           </div>
           <div className="space-y-2">
-            <Label>Date</Label>
+            <Label>Date <span className="text-destructive">*</span></Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
@@ -234,7 +234,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           </div>
           {frequency === "monthly" && (
             <div className="space-y-2">
-              <Label>Month</Label>
+              <Label>Month <span className="text-destructive">*</span></Label>
               <Select value={month} onValueChange={setMonth}>
                 <SelectTrigger><SelectValue placeholder="Select month" /></SelectTrigger>
                 <SelectContent>
@@ -246,7 +246,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
             </div>
           )}
           <div className="space-y-2">
-            <Label>Description</Label>
+            <Label>Description <span className="text-destructive">*</span></Label>
             <Input placeholder="e.g. Pharmacy medicine" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           {showDupeWarning && (
