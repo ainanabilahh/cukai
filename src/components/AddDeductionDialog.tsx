@@ -247,6 +247,11 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
                 ))}
               </SelectContent>
             </Select>
+            {CATEGORY_NOTES[category] && (
+              <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 leading-relaxed">
+                💡 {CATEGORY_NOTES[category]}
+              </p>
+            )}
           </div>
           <div className="space-y-2">
             <Label>Frequency <span className="text-destructive">*</span></Label>
