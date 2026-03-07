@@ -14,8 +14,13 @@ import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
 
 interface Props {
-  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImage?: string; frequency: DeductionFrequency; month?: string }) => void;
+  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImages?: string[]; frequency: DeductionFrequency; month?: string }) => void;
   checkDuplicate?: (d: { category: string; amount: number; date: string; description: string }) => boolean;
+}
+
+interface ReceiptFile {
+  file: File;
+  preview: string; // URL or "pdf"
 }
 
 export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
@@ -26,8 +31,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
-  const [receiptFile, setReceiptFile] = useState<File | null>(null);
-  const [receiptPreview, setReceiptPreview] = useState<string | null>(null);
+  const [receiptFiles, setReceiptFiles] = useState<ReceiptFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const [frequency, setFrequency] = useState<DeductionFrequency>("yearly");
   const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
@@ -45,47 +49,66 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const isImage = file.type.startsWith("image/");
-    const isPdf = file.type === "application/pdf";
-    if (!isImage && !isPdf) {
-      toast.error("Please upload an image or PDF file");
-      return;
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    const newReceipts: ReceiptFile[] = [];
+    for (const file of Array.from(files)) {
+      const isImage = file.type.startsWith("image/");
+      const isPdf = file.type === "application/pdf";
+      if (!isImage && !isPdf) {
+        toast.error(`"${file.name}" is not an image or PDF`);
+        continue;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`"${file.name}" is over 10MB`);
+        continue;
+      }
+      newReceipts.push({
+        file,
+        preview: isImage ? URL.createObjectURL(file) : "pdf",
+      });
     }
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error("File must be under 10MB");
-      return;
+
+    if (newReceipts.length > 0) {
+      setReceiptFiles((prev) => [...prev, ...newReceipts]);
+      toast.success(`${newReceipts.length} receipt(s) attached!`);
     }
-    setReceiptFile(file);
-    if (isImage) {
-      setReceiptPreview(URL.createObjectURL(file));
-    } else {
-      setReceiptPreview("pdf");
-    }
-    toast.success("Receipt attached!");
+    e.target.value = "";
   };
 
-  const clearReceipt = () => {
-    if (receiptPreview && receiptPreview !== "pdf") URL.revokeObjectURL(receiptPreview);
-    setReceiptFile(null);
-    setReceiptPreview(null);
+  const removeReceipt = (index: number) => {
+    setReceiptFiles((prev) => {
+      const item = prev[index];
+      if (item.preview !== "pdf") URL.revokeObjectURL(item.preview);
+      return prev.filter((_, i) => i !== index);
+    });
+  };
+
+  const clearAllReceipts = () => {
+    receiptFiles.forEach((r) => {
+      if (r.preview !== "pdf") URL.revokeObjectURL(r.preview);
+    });
+    setReceiptFiles([]);
   };
 
   const doSubmit = async () => {
     const num = parseFloat(amount);
-    let receiptFileName: string | undefined;
+    const savedFileNames: string[] = [];
 
-    if (receiptFile) {
+    if (receiptFiles.length > 0) {
       const storageReady = await ensureStorage();
       if (storageReady) {
-        const id = crypto.randomUUID();
-        const ext = receiptFile.type.startsWith("image/") ? "jpg" : "pdf";
-        receiptFileName = `receipt-${id}.${ext}`;
-        const saved = await fileStorage.saveFile(receiptFileName, receiptFile);
-        if (!saved) {
-          toast.error("Failed to save receipt to folder");
-          return;
+        for (const receipt of receiptFiles) {
+          const id = crypto.randomUUID();
+          const ext = receipt.file.type.startsWith("image/") ? "jpg" : "pdf";
+          const fileName = `receipt-${id}.${ext}`;
+          const saved = await fileStorage.saveFile(fileName, receipt.file);
+          if (!saved) {
+            toast.error("Failed to save a receipt to folder");
+            return;
+          }
+          savedFileNames.push(fileName);
         }
       }
     }
@@ -95,22 +118,22 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       amount: num,
       date: format(date, "yyyy-MM-dd"),
       description: description.trim(),
-      receiptImage: receiptFileName,
+      receiptImages: savedFileNames.length > 0 ? savedFileNames : undefined,
       frequency,
       month: frequency === "monthly" ? month : undefined,
     });
     toast.success("Deduction added successfully!");
     setAmount("");
     setDescription("");
-    clearReceipt();
+    clearAllReceipts();
     setMonth("");
     setShowDupeWarning(false);
     setOpen(false);
   };
 
   const handleSubmit = () => {
-    if (!receiptFile) {
-      toast.error("Please upload a receipt");
+    if (receiptFiles.length === 0) {
+      toast.error("Please upload at least one receipt");
       return;
     }
     const num = parseFloat(amount);
@@ -134,7 +157,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) clearReceipt(); }}>
+    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) clearAllReceipts(); }}>
       <DialogTrigger asChild>
         <Button className="gap-2 font-display font-semibold">
           <Plus className="h-4 w-4" />
@@ -148,47 +171,54 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
         <div className="space-y-4 pt-2">
           {/* Receipt Upload */}
           <div className="space-y-2">
-            <Label>Receipt <span className="text-destructive">*</span></Label>
-            {receiptPreview ? (
-              <div className="relative rounded-lg border overflow-hidden">
-                {receiptPreview === "pdf" ? (
-                  <div className="flex items-center gap-2 p-4 bg-muted">
-                    <FileText className="h-8 w-8 text-primary" />
-                    <span className="text-sm font-medium">PDF Receipt attached</span>
+            <Label>Receipts <span className="text-destructive">*</span></Label>
+
+            {/* Show uploaded receipts */}
+            {receiptFiles.length > 0 && (
+              <div className="space-y-2">
+                {receiptFiles.map((r, i) => (
+                  <div key={i} className="relative rounded-lg border overflow-hidden">
+                    {r.preview === "pdf" ? (
+                      <div className="flex items-center gap-2 p-3 bg-muted">
+                        <FileText className="h-6 w-6 text-primary" />
+                        <span className="text-sm font-medium truncate flex-1">{r.file.name}</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 p-2 bg-muted">
+                        <img src={r.preview} alt="Receipt" className="h-12 w-12 object-cover rounded" />
+                        <span className="text-sm truncate flex-1">{r.file.name}</span>
+                      </div>
+                    )}
+                    <Button
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6"
+                      onClick={() => removeReceipt(i)}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
                   </div>
-                ) : (
-                  <img src={receiptPreview} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
-                )}
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-7 w-7"
-                  onClick={clearReceipt}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+                ))}
               </div>
-            ) : (
-              <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
-                  {uploading ? (
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                  ) : (
-                    <Upload className="h-5 w-5 text-muted-foreground" />
-                  )}
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  {uploading ? "Processing..." : "Click to upload receipt (image or PDF)"}
-                </span>
-                <input
-                  type="file"
-                  accept="image/*,application/pdf"
-                  className="hidden"
-                  onChange={handleFileChange}
-                  disabled={uploading}
-                />
-              </label>
             )}
+
+            {/* Upload area */}
+            <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <Upload className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <span className="text-sm text-muted-foreground">
+                {receiptFiles.length > 0 ? "Add more receipts" : "Click to upload receipts (images or PDFs)"}
+              </span>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                multiple
+                className="hidden"
+                onChange={handleFileChange}
+                disabled={uploading}
+              />
+            </label>
           </div>
 
           <div className="space-y-2">
@@ -207,7 +237,6 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
               </SelectContent>
             </Select>
           </div>
-          {/* Frequency */}
           <div className="space-y-2">
             <Label>Frequency <span className="text-destructive">*</span></Label>
             <Select value={frequency} onValueChange={(v) => setFrequency(v as DeductionFrequency)}>
