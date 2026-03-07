@@ -1,36 +1,36 @@
 export type DeductionCategory =
-  | "Perubatan"
-  | "Pendidikan"
-  | "Gaya Hidup"
-  | "Peralatan Sukan"
+  | "Medical"
+  | "Education"
+  | "Lifestyle"
+  | "Sports Equipment"
   | "SSPN"
-  | "Insurans"
+  | "Insurance"
   | "Zakat"
-  | "Derma"
-  | "Lain-lain";
+  | "Donations"
+  | "Others";
 
 export const CATEGORIES: DeductionCategory[] = [
-  "Perubatan",
-  "Pendidikan",
-  "Gaya Hidup",
-  "Peralatan Sukan",
+  "Medical",
+  "Education",
+  "Lifestyle",
+  "Sports Equipment",
   "SSPN",
-  "Insurans",
+  "Insurance",
   "Zakat",
-  "Derma",
-  "Lain-lain",
+  "Donations",
+  "Others",
 ];
 
 export const CATEGORY_LIMITS: Record<DeductionCategory, number> = {
-  Perubatan: 10000,
-  Pendidikan: 7000,
-  "Gaya Hidup": 2500,
-  "Peralatan Sukan": 1000,
+  Medical: 10000,
+  Education: 7000,
+  Lifestyle: 2500,
+  "Sports Equipment": 1000,
   SSPN: 8000,
-  Insurans: 7000,
+  Insurance: 7000,
   Zakat: Infinity,
-  Derma: Infinity,
-  "Lain-lain": Infinity,
+  Donations: Infinity,
+  Others: Infinity,
 };
 
 export interface Deduction {
@@ -42,13 +42,13 @@ export interface Deduction {
 }
 
 export const CATEGORY_COLORS: Record<DeductionCategory, string> = {
-  Perubatan: "hsl(var(--chart-1))",
-  Pendidikan: "hsl(var(--chart-2))",
-  "Gaya Hidup": "hsl(var(--chart-3))",
-  "Peralatan Sukan": "hsl(var(--chart-4))",
+  Medical: "hsl(var(--chart-1))",
+  Education: "hsl(var(--chart-2))",
+  Lifestyle: "hsl(var(--chart-3))",
+  "Sports Equipment": "hsl(var(--chart-4))",
   SSPN: "hsl(var(--chart-5))",
-  Insurans: "hsl(174, 40%, 50%)",
+  Insurance: "hsl(174, 40%, 50%)",
   Zakat: "hsl(42, 60%, 45%)",
-  Derma: "hsl(200, 40%, 40%)",
-  "Lain-lain": "hsl(200, 10%, 50%)",
+  Donations: "hsl(200, 40%, 40%)",
+  Others: "hsl(200, 10%, 50%)",
 };

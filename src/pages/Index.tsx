@@ -12,7 +12,6 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center justify-between px-4 py-5">
           <div className="flex items-center gap-3">
@@ -20,8 +19,8 @@ const Index = () => {
               <Receipt className="h-5 w-5 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="font-display text-xl font-bold tracking-tight">Penjejak Potongan Cukai</h1>
-              <p className="text-xs text-muted-foreground">Tahun Taksiran 2025</p>
+              <h1 className="font-display text-xl font-bold tracking-tight">Tax Deduction Tracker</h1>
+              <p className="text-xs text-muted-foreground">Year of Assessment 2025</p>
             </div>
           </div>
           <AddDeductionDialog onAdd={addDeduction} />
@@ -29,7 +28,6 @@ const Index = () => {
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
-        {/* Summary Cards */}
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
             <CardContent className="flex items-center gap-4 p-5">
@@ -37,8 +35,8 @@ const Index = () => {
                 <TrendingUp className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Jumlah Potongan</p>
-                <p className="font-display text-2xl font-bold">RM {total.toLocaleString("ms-MY", { minimumFractionDigits: 2 })}</p>
+                <p className="text-sm text-muted-foreground">Total Deductions</p>
+                <p className="font-display text-2xl font-bold">RM {total.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</p>
               </div>
             </CardContent>
           </Card>
@@ -48,7 +46,7 @@ const Index = () => {
                 <Receipt className="h-6 w-6 text-accent-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Bilangan Resit</p>
+                <p className="text-sm text-muted-foreground">Total Receipts</p>
                 <p className="font-display text-2xl font-bold">{deductions.length}</p>
               </div>
             </CardContent>
@@ -59,37 +57,33 @@ const Index = () => {
                 <Layers className="h-6 w-6 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Kategori</p>
+                <p className="text-sm text-muted-foreground">Categories</p>
                 <p className="font-display text-2xl font-bold">{categoryCount}</p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
         <div className="grid gap-6 lg:grid-cols-3">
-          {/* Deduction List */}
           <div className="lg:col-span-2 space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display">Senarai Potongan</CardTitle>
+                <CardTitle className="font-display">Deduction List</CardTitle>
               </CardHeader>
               <CardContent>
                 <DeductionList deductions={deductions} onDelete={deleteDeduction} />
               </CardContent>
             </Card>
           </div>
-
-          {/* Category Breakdown */}
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="font-display">Pecahan Kategori</CardTitle>
+                <CardTitle className="font-display">Category Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
                 <CategoryBreakdown totalByCategory={totalByCategory} />
                 {categoryData.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">Tiada data lagi</p>
+                  <p className="text-sm text-muted-foreground text-center py-8">No data yet</p>
                 )}
               </CardContent>
             </Card>

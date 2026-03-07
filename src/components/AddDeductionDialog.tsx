@@ -18,7 +18,7 @@ interface Props {
 
 export function AddDeductionDialog({ onAdd }: Props) {
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<DeductionCategory>("Gaya Hidup");
+  const [category, setCategory] = useState<DeductionCategory>("Lifestyle");
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
@@ -26,15 +26,15 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const handleSubmit = () => {
     const num = parseFloat(amount);
     if (!num || num <= 0) {
-      toast.error("Sila masukkan jumlah yang sah");
+      toast.error("Please enter a valid amount");
       return;
     }
     if (!description.trim()) {
-      toast.error("Sila masukkan keterangan");
+      toast.error("Please enter a description");
       return;
     }
     onAdd({ category, amount: num, date: format(date, "yyyy-MM-dd"), description: description.trim() });
-    toast.success("Potongan berjaya ditambah!");
+    toast.success("Deduction added successfully!");
     setAmount("");
     setDescription("");
     setOpen(false);
@@ -45,16 +45,16 @@ export function AddDeductionDialog({ onAdd }: Props) {
       <DialogTrigger asChild>
         <Button className="gap-2 font-display font-semibold">
           <Plus className="h-4 w-4" />
-          Tambah Potongan
+          Add Deduction
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-display text-xl">Tambah Potongan Cukai</DialogTitle>
+          <DialogTitle className="font-display text-xl">Add Tax Deduction</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-2">
-            <Label>Kategori</Label>
+            <Label>Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as DeductionCategory)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
@@ -65,16 +65,16 @@ export function AddDeductionDialog({ onAdd }: Props) {
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Jumlah (RM)</Label>
+            <Label>Amount (RM)</Label>
             <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
           </div>
           <div className="space-y-2">
-            <Label>Tarikh</Label>
+            <Label>Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
                   <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "dd MMM yyyy") : "Pilih tarikh"}
+                  {date ? format(date, "dd MMM yyyy") : "Pick a date"}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -83,10 +83,10 @@ export function AddDeductionDialog({ onAdd }: Props) {
             </Popover>
           </div>
           <div className="space-y-2">
-            <Label>Keterangan</Label>
-            <Input placeholder="cth: Ubat farmasi" value={description} onChange={(e) => setDescription(e.target.value)} />
+            <Label>Description</Label>
+            <Input placeholder="e.g. Pharmacy medicine" value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
-          <Button onClick={handleSubmit} className="w-full font-display font-semibold">Simpan</Button>
+          <Button onClick={handleSubmit} className="w-full font-display font-semibold">Save</Button>
         </div>
       </DialogContent>
     </Dialog>
