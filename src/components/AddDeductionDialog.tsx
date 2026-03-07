@@ -128,7 +128,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
     onAdd({
       category,
       amount: num,
-      date: format(date, "yyyy-MM-dd"),
+      date: frequency === "monthly" ? format(date, "yyyy-MM-dd") : "",
       description: description.trim(),
       receiptImages: savedFileNames.length > 0 ? savedFileNames : undefined,
       frequency,
