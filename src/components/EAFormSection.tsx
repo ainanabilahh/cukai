@@ -113,7 +113,7 @@ export function EAFormSection() {
           {/* Upload area */}
           <div className="space-y-3">
             <div className="space-y-2">
-              <Label>Employer Name</Label>
+              <Label>Employer Name <span className="text-destructive">*</span></Label>
               <Input
                 placeholder="e.g. Syarikat ABC Sdn Bhd"
                 value={employerName}
