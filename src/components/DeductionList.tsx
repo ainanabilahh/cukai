@@ -216,11 +216,11 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
                         View Receipt
                       </Button>
                     ) : (
-                      <label className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
-                        <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none">
+                      <label className="cursor-pointer inline-flex" onClick={(e) => e.stopPropagation()}>
+                        <span className="inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md text-sm font-medium border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3 cursor-pointer">
                           <Paperclip className="h-3.5 w-3.5" />
                           Attach Receipt
-                        </Button>
+                        </span>
                         <input
                           type="file"
                           accept="image/*,application/pdf"
