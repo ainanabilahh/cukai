@@ -47,7 +47,12 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [frequency, setFrequency] = useState<DeductionFrequency>("yearly");
-  const [month, setMonth] = useState<string>("");
+  const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
+
+  const handleDateChange = (d: Date) => {
+    setDate(d);
+    setMonth(MONTHS[d.getMonth()]);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
