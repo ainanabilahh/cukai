@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeductions } from "@/hooks/useDeductions";
-import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
 import { DeductionList } from "@/components/DeductionList";
 import { DeductionFilters } from "@/components/DeductionFilters";
@@ -25,7 +24,6 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
 const Index = () => {
   const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(currentYear);
-  const fileStorage = useFileStorageContext();
   const {
     deductions,
     filteredDeductions,
@@ -79,14 +77,7 @@ const Index = () => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <StorageSettings
-              isSupported={fileStorage.isSupported}
-              isReady={fileStorage.isReady}
-              directoryName={fileStorage.directoryName}
-              onPickDirectory={fileStorage.pickDirectory}
-              onChangeDirectory={fileStorage.changeDirectory}
-              onClearDirectory={fileStorage.clearDirectory}
-            />
+            <StorageSettings />
             <ThemeToggle />
             <AddDeductionDialog onAdd={addDeduction} checkDuplicate={checkDuplicate} />
           </div>

@@ -1,50 +1,62 @@
-import { useState, useCallback } from "react";
-
-const STORAGE_KEY = "ea-forms";
+import { useState, useCallback, useEffect } from "react";
+import { getDb } from "@/lib/db";
 
 export interface EAForm {
   id: string;
   employerName: string;
-  fileName: string; // filename in storage folder
-  fileType: string; // "image" or "pdf"
+  fileName: string;
+  fileType: string;
   uploadedAt: string;
-  /** @deprecated Legacy field - old base64 data URL */
-  file?: string;
 }
 
-function load(): EAForm[] {
-  try {
-    const data = localStorage.getItem(STORAGE_KEY);
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
+type Row = {
+  id: string;
+  employer_name: string;
+  file_name: string;
+  file_type: string;
+  uploaded_at: string;
+};
+
+function rowToForm(row: Row): EAForm {
+  return {
+    id: row.id,
+    employerName: row.employer_name,
+    fileName: row.file_name,
+    fileType: row.file_type,
+    uploadedAt: row.uploaded_at,
+  };
 }
 
-function save(forms: EAForm[]) {
-  // Strip any legacy base64 data before saving to keep localStorage lean
-  const clean = forms.map(({ file, ...rest }) => rest);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
+async function fetchForms(): Promise<EAForm[]> {
+  const db = await getDb();
+  const rows = await db.select<Row[]>(
+    "SELECT * FROM ea_forms ORDER BY uploaded_at DESC"
+  );
+  return rows.map(rowToForm);
 }
 
 export function useEAForms() {
-  const [forms, setForms] = useState<EAForm[]>(load);
+  const [forms, setForms] = useState<EAForm[]>([]);
 
-  const addForm = useCallback((form: Omit<EAForm, "id" | "uploadedAt" | "file">) => {
-    const newForm: EAForm = { ...form, id: crypto.randomUUID(), uploadedAt: new Date().toISOString() };
-    setForms((prev) => {
-      const updated = [newForm, ...prev];
-      save(updated);
-      return updated;
-    });
+  useEffect(() => {
+    fetchForms().then(setForms);
   }, []);
 
-  const deleteForm = useCallback((id: string) => {
-    setForms((prev) => {
-      const updated = prev.filter((f) => f.id !== id);
-      save(updated);
-      return updated;
-    });
+  const addForm = useCallback(async (form: Omit<EAForm, "id" | "uploadedAt">) => {
+    const db = await getDb();
+    const id = crypto.randomUUID();
+    const uploadedAt = new Date().toISOString();
+    await db.execute(
+      "INSERT INTO ea_forms (id, employer_name, file_name, file_type, uploaded_at) VALUES (?, ?, ?, ?, ?)",
+      [id, form.employerName, form.fileName, form.fileType, uploadedAt]
+    );
+    setForms((prev) => [{ ...form, id, uploadedAt }, ...prev]);
+  }, []);
+
+  const deleteForm = useCallback(async (id: string) => {
+    const db = await getDb();
+    await db.execute("DELETE FROM ea_forms WHERE id=?", [id]);
+    setForms((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
   return { forms, addForm, deleteForm };

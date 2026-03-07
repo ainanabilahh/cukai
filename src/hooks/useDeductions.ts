@@ -1,90 +1,140 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { Deduction, DeductionCategory, CATEGORY_LIMITS } from "@/lib/deduction-data";
+import { getDb } from "@/lib/db";
 
-function storageKey(year: number) {
-  return `tax-deductions-${year}`;
+type Row = {
+  id: string;
+  year: number;
+  category: string;
+  amount: number;
+  date: string;
+  description: string;
+  frequency: string;
+  month: string | null;
+  receipt_images: string | null;
+};
+
+function rowToDeduction(row: Row): Deduction {
+  return {
+    id: row.id,
+    category: row.category as DeductionCategory,
+    amount: row.amount,
+    date: row.date,
+    description: row.description,
+    frequency: row.frequency as "yearly" | "monthly",
+    month: row.month ?? undefined,
+    receiptImages: row.receipt_images ? JSON.parse(row.receipt_images) : undefined,
+  };
 }
 
-function loadDeductions(year: number): Deduction[] {
-  try {
-    // Migrate old data from legacy key on first load
-    const legacyKey = "tax-deductions";
-    const legacyData = localStorage.getItem(legacyKey);
-    if (legacyData) {
-      const currentYearKey = storageKey(year);
-      if (!localStorage.getItem(currentYearKey)) {
-        localStorage.setItem(currentYearKey, legacyData);
-      }
-      localStorage.removeItem(legacyKey);
-    }
-
-    const data = localStorage.getItem(storageKey(year));
-    return data ? JSON.parse(data) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveDeductions(year: number, deductions: Deduction[]) {
-  localStorage.setItem(storageKey(year), JSON.stringify(deductions));
+async function fetchDeductions(year: number): Promise<Deduction[]> {
+  const db = await getDb();
+  const rows = await db.select<Row[]>(
+    "SELECT * FROM deductions WHERE year = ? ORDER BY date DESC",
+    [year]
+  );
+  return rows.map(rowToDeduction);
 }
 
 export function useDeductions(year: number) {
-  const [deductions, setDeductions] = useState<Deduction[]>(() => loadDeductions(year));
+  const [deductions, setDeductions] = useState<Deduction[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<DeductionCategory | "all">("all");
 
-  // Reload when year changes
+  useEffect(() => {
+    fetchDeductions(year).then(setDeductions);
+  }, [year]);
+
   const switchYear = useCallback((newYear: number) => {
-    setDeductions(loadDeductions(newYear));
+    fetchDeductions(newYear).then(setDeductions);
   }, []);
 
-  const addDeduction = useCallback((deduction: Omit<Deduction, "id">) => {
-    const newDeduction: Deduction = {
-      ...deduction,
-      id: crypto.randomUUID(),
-    };
-    setDeductions((prev) => {
-      const updated = [newDeduction, ...prev];
-      saveDeductions(year, updated);
-      return updated;
-    });
-  }, [year]);
-
-  const importDeductions = useCallback((items: Omit<Deduction, "id">[]) => {
-    setDeductions((prev) => {
-      const newOnes = items.map((item) => ({ ...item, id: crypto.randomUUID() }));
-      const updated = [...newOnes, ...prev];
-      saveDeductions(year, updated);
-      return updated;
-    });
-  }, [year]);
-
-  const checkDuplicate = useCallback((deduction: { category: string; amount: number; date: string; description: string }) => {
-    return deductions.some(
-      (d) =>
-        d.category === deduction.category &&
-        d.amount === deduction.amount &&
-        d.date === deduction.date &&
-        d.description.toLowerCase() === deduction.description.toLowerCase()
+  const addDeduction = useCallback(async (deduction: Omit<Deduction, "id">) => {
+    const db = await getDb();
+    const id = crypto.randomUUID();
+    await db.execute(
+      `INSERT INTO deductions (id, year, category, amount, date, description, frequency, month, receipt_images)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        year,
+        deduction.category,
+        deduction.amount,
+        deduction.date,
+        deduction.description,
+        deduction.frequency,
+        deduction.month ?? null,
+        deduction.receiptImages ? JSON.stringify(deduction.receiptImages) : null,
+      ]
     );
+    const newDeduction: Deduction = { ...deduction, id };
+    setDeductions((prev) => [newDeduction, ...prev]);
+  }, [year]);
+
+  const importDeductions = useCallback(async (items: Omit<Deduction, "id">[]) => {
+    const db = await getDb();
+    for (const item of items) {
+      const id = crypto.randomUUID();
+      await db.execute(
+        `INSERT INTO deductions (id, year, category, amount, date, description, frequency, month, receipt_images)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [
+          id,
+          year,
+          item.category,
+          item.amount,
+          item.date,
+          item.description,
+          item.frequency,
+          item.month ?? null,
+          item.receiptImages ? JSON.stringify(item.receiptImages) : null,
+        ]
+      );
+    }
+    const fresh = await fetchDeductions(year);
+    setDeductions(fresh);
+  }, [year]);
+
+  const checkDuplicate = useCallback(
+    (deduction: { category: string; amount: number; date: string; description: string }) => {
+      return deductions.some(
+        (d) =>
+          d.category === deduction.category &&
+          d.amount === deduction.amount &&
+          d.date === deduction.date &&
+          d.description.toLowerCase() === deduction.description.toLowerCase()
+      );
+    },
+    [deductions]
+  );
+
+  const updateDeduction = useCallback(async (id: string, updates: Partial<Deduction>) => {
+    const db = await getDb();
+    const existing = deductions.find((d) => d.id === id);
+    if (!existing) return;
+    const merged = { ...existing, ...updates };
+    await db.execute(
+      `UPDATE deductions SET category=?, amount=?, date=?, description=?, frequency=?, month=?, receipt_images=?
+       WHERE id=?`,
+      [
+        merged.category,
+        merged.amount,
+        merged.date,
+        merged.description,
+        merged.frequency,
+        merged.month ?? null,
+        merged.receiptImages ? JSON.stringify(merged.receiptImages) : null,
+        id,
+      ]
+    );
+    setDeductions((prev) => prev.map((d) => (d.id === id ? merged : d)));
   }, [deductions]);
 
-  const updateDeduction = useCallback((id: string, updates: Partial<Deduction>) => {
-    setDeductions((prev) => {
-      const updated = prev.map((d) => (d.id === id ? { ...d, ...updates } : d));
-      saveDeductions(year, updated);
-      return updated;
-    });
-  }, [year]);
-
-  const deleteDeduction = useCallback((id: string) => {
-    setDeductions((prev) => {
-      const updated = prev.filter((d) => d.id !== id);
-      saveDeductions(year, updated);
-      return updated;
-    });
-  }, [year]);
+  const deleteDeduction = useCallback(async (id: string) => {
+    const db = await getDb();
+    await db.execute("DELETE FROM deductions WHERE id=?", [id]);
+    setDeductions((prev) => prev.filter((d) => d.id !== id));
+  }, []);
 
   const filteredDeductions = useMemo(() => {
     let result = deductions;

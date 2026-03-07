@@ -1,202 +1,132 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
+import {
+  BaseDirectory,
+  readFile,
+  writeFile,
+  remove,
+  mkdir,
+  exists,
+} from "@tauri-apps/plugin-fs";
+import { getSetting, setSetting } from "@/lib/db";
 
-const DB_NAME = "tax-file-storage";
-const STORE_NAME = "handles";
-const DIR_HANDLE_KEY = "directory-handle";
+const SETTING_KEY = "files_directory";
 
-// IndexedDB helpers for persisting directory handle
-function openDB(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
+// Default fallback: app local data
+const DEFAULT_LABEL = "App Default";
 
-async function getStoredHandle(): Promise<FileSystemDirectoryHandle | null> {
-  try {
-    const db = await openDB();
-    return new Promise((resolve) => {
-      const tx = db.transaction(STORE_NAME, "readonly");
-      const req = tx.objectStore(STORE_NAME).get(DIR_HANDLE_KEY);
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
-    });
-  } catch {
-    return null;
+async function ensureDir(path: string) {
+  const dirExists = await exists(path, { baseDir: BaseDirectory.AppLocalData });
+  if (!dirExists) {
+    await mkdir(path, { baseDir: BaseDirectory.AppLocalData, recursive: true });
   }
 }
 
-async function storeHandle(handle: FileSystemDirectoryHandle): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).put(handle, DIR_HANDLE_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function clearHandle(): Promise<void> {
-  const db = await openDB();
-  return new Promise((resolve) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    tx.objectStore(STORE_NAME).delete(DIR_HANDLE_KEY);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => resolve();
-  });
-}
-
-async function verifyPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
-  const opts = { mode: "readwrite" as const };
-  if ((await (handle as any).queryPermission(opts)) === "granted") return true;
-  if ((await (handle as any).requestPermission(opts)) === "granted") return true;
-  return false;
+async function ensureAbsoluteDir(path: string) {
+  const dirExists = await exists(path);
+  if (!dirExists) {
+    await mkdir(path, { recursive: true });
+  }
 }
 
 export function useFileStorage() {
-  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
-  const [directoryName, setDirectoryName] = useState<string | null>(null);
+  const [customDir, setCustomDir] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
-  const [isSupported] = useState(() => "showDirectoryPicker" in window);
 
-  // Try to restore saved handle on mount
   useEffect(() => {
-    if (!isSupported) return;
-    getStoredHandle().then(async (handle) => {
-      if (handle) {
-        try {
-          // Just check if we have it - don't request permission yet
-          setDirHandle(handle);
-          setDirectoryName(handle.name);
-          setIsReady(true);
-        } catch {
-          setIsReady(false);
-        }
-      }
+    getSetting(SETTING_KEY).then((val) => {
+      setCustomDir(val);
+      setIsReady(true);
     });
-  }, [isSupported]);
+  }, []);
 
   const pickDirectory = useCallback(async (): Promise<boolean> => {
-    if (!isSupported) return false;
-    try {
-      const handle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
-      await storeHandle(handle);
-      setDirHandle(handle);
-      setDirectoryName(handle.name);
-      setIsReady(true);
-      return true;
-    } catch (err: any) {
-      if (err.name !== "AbortError") console.error("Directory picker error:", err);
-      return false;
-    }
-  }, [isSupported]);
+    const selected = await open({ directory: true, multiple: false, title: "Choose Storage Folder" });
+    if (!selected) return false;
+    const dir = typeof selected === "string" ? selected : selected[0];
+    await setSetting(SETTING_KEY, dir);
+    setCustomDir(dir);
+    return true;
+  }, []);
 
-  const ensurePermission = useCallback(async (): Promise<FileSystemDirectoryHandle | null> => {
-    if (!dirHandle) return null;
-    const granted = await verifyPermission(dirHandle);
-    if (!granted) {
-      // Permission denied, user needs to re-pick
-      setIsReady(false);
-      return null;
-    }
-    return dirHandle;
-  }, [dirHandle]);
-
-  // Navigate to a subdirectory, creating folders as needed
-  const getSubdirectory = useCallback(async (rootHandle: FileSystemDirectoryHandle, path: string): Promise<FileSystemDirectoryHandle> => {
-    const parts = path.split("/").filter(Boolean);
-    let current = rootHandle;
-    for (const part of parts) {
-      current = await current.getDirectoryHandle(part, { create: true });
-    }
-    return current;
+  const clearDirectory = useCallback(async () => {
+    const db = await import("@/lib/db");
+    const dbInstance = await db.getDb();
+    await dbInstance.execute("DELETE FROM settings WHERE key = ?", [SETTING_KEY]);
+    setCustomDir(null);
   }, []);
 
   const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
-    const handle = await ensurePermission();
-    if (!handle) return false;
     try {
-      // Support paths like "2025/receipts/umobile/receipt-xxx.jpg"
-      const parts = filePath.split("/");
-      const fileName = parts.pop()!;
-      let targetDir = handle;
-      if (parts.length > 0) {
-        targetDir = await getSubdirectory(handle, parts.join("/"));
-      }
-      const fileHandle = await targetDir.getFileHandle(fileName, { create: true });
-      const writable = await fileHandle.createWritable();
+      let bytes: Uint8Array;
       if (typeof data === "string") {
-        const response = await fetch(data);
-        const blob = await response.blob();
-        await writable.write(blob);
+        const res = await fetch(data);
+        bytes = new Uint8Array(await res.arrayBuffer());
       } else {
-        await writable.write(data);
+        bytes = new Uint8Array(await data.arrayBuffer());
       }
-      await writable.close();
+
+      if (customDir) {
+        const fullPath = `${customDir}/${filePath}`;
+        const parts = fullPath.split("/");
+        parts.pop();
+        await ensureAbsoluteDir(parts.join("/"));
+        await writeFile(fullPath, bytes);
+      } else {
+        const parts = `files/${filePath}`.split("/");
+        parts.pop();
+        await ensureDir(parts.join("/"));
+        await writeFile(`files/${filePath}`, bytes, { baseDir: BaseDirectory.AppLocalData });
+      }
       return true;
     } catch (err) {
-      console.error("Save file error:", err);
+      console.error("saveFile error:", err);
       return false;
     }
-  }, [ensurePermission, getSubdirectory]);
+  }, [customDir]);
 
-  const readFile = useCallback(async (filePath: string): Promise<string | null> => {
-    const handle = await ensurePermission();
-    if (!handle) return null;
+  const readFileAsUrl = useCallback(async (filePath: string): Promise<string | null> => {
     try {
-      const parts = filePath.split("/");
-      const fileName = parts.pop()!;
-      let targetDir = handle;
-      if (parts.length > 0) {
-        targetDir = await getSubdirectory(handle, parts.join("/"));
+      let bytes: Uint8Array;
+      if (customDir) {
+        bytes = await readFile(`${customDir}/${filePath}`);
+      } else {
+        bytes = await readFile(`files/${filePath}`, { baseDir: BaseDirectory.AppLocalData });
       }
-      const fileHandle = await targetDir.getFileHandle(fileName);
-      const file = await fileHandle.getFile();
-      return URL.createObjectURL(file);
+      const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+      const mime = ext === "pdf" ? "application/pdf"
+        : ["jpg", "jpeg"].includes(ext) ? "image/jpeg"
+        : ext === "png" ? "image/png"
+        : "application/octet-stream";
+      return URL.createObjectURL(new Blob([bytes], { type: mime }));
     } catch {
       return null;
     }
-  }, [ensurePermission, getSubdirectory]);
+  }, [customDir]);
 
   const deleteFile = useCallback(async (filePath: string): Promise<boolean> => {
-    const handle = await ensurePermission();
-    if (!handle) return false;
     try {
-      const parts = filePath.split("/");
-      const fileName = parts.pop()!;
-      let targetDir = handle;
-      if (parts.length > 0) {
-        targetDir = await getSubdirectory(handle, parts.join("/"));
+      if (customDir) {
+        await remove(`${customDir}/${filePath}`);
+      } else {
+        await remove(`files/${filePath}`, { baseDir: BaseDirectory.AppLocalData });
       }
-      await targetDir.removeEntry(fileName);
       return true;
     } catch {
       return false;
     }
-  }, [ensurePermission, getSubdirectory]);
-
-  const changeDirectory = useCallback(async (): Promise<boolean> => {
-    return pickDirectory();
-  }, [pickDirectory]);
-
-  const clearDirectory = useCallback(async () => {
-    await clearHandle();
-    setDirHandle(null);
-    setDirectoryName(null);
-    setIsReady(false);
-  }, []);
+  }, [customDir]);
 
   return {
-    isSupported,
+    isSupported: true,
     isReady,
-    directoryName,
+    directoryName: customDir ?? DEFAULT_LABEL,
+    customDir,
     pickDirectory,
-    changeDirectory,
+    changeDirectory: pickDirectory,
     clearDirectory,
     saveFile,
-    readFile,
+    readFile: readFileAsUrl,
     deleteFile,
   };
 }
