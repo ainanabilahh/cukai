@@ -25,7 +25,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">Year of Assessment 2025</p>
             </div>
           </div>
-          <AddDeductionDialog onAdd={addDeduction} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <AddDeductionDialog onAdd={addDeduction} />
+          </div>
         </div>
       </header>
 
