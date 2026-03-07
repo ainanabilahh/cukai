@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, Upload, X, FileText } from "lucide-react";
+import { CalendarIcon, Plus, Upload, X, FileText, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, CATEGORY_GROUPS, CATEGORY_NOTES, DeductionCategory, DeductionFrequency, MONTHS } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
 
@@ -234,19 +235,36 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
 
           <div className="space-y-2">
             <Label>Category <span className="text-destructive">*</span></Label>
-            <Select value={category} onValueChange={(v) => setCategory(v as DeductionCategory)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent className="max-h-72">
-                {Object.entries(CATEGORY_GROUPS).map(([group, cats]) => (
-                  <SelectGroup key={group}>
-                    <SelectLabel className="font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground">{group}</SelectLabel>
-                    {cats.map((c) => (
-                      <SelectItem key={c} value={c}>{c}</SelectItem>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                  {category || "Select category..."}
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search category..." />
+                  <CommandList className="max-h-60">
+                    <CommandEmpty>No category found.</CommandEmpty>
+                    {Object.entries(CATEGORY_GROUPS).map(([group, cats]) => (
+                      <CommandGroup key={group} heading={group}>
+                        {cats.map((c) => (
+                          <CommandItem
+                            key={c}
+                            value={c}
+                            onSelect={() => setCategory(c)}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", category === c ? "opacity-100" : "opacity-0")} />
+                            {c}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
                     ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
             {CATEGORY_NOTES[category] && (
               <p className="text-xs text-muted-foreground bg-muted/50 rounded-md px-3 py-2 leading-relaxed">
                 💡 {CATEGORY_NOTES[category]}
