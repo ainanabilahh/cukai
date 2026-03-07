@@ -70,6 +70,14 @@ export function useDeductions(year: number) {
     );
   }, [deductions]);
 
+  const updateDeduction = useCallback((id: string, updates: Partial<Deduction>) => {
+    setDeductions((prev) => {
+      const updated = prev.map((d) => (d.id === id ? { ...d, ...updates } : d));
+      saveDeductions(year, updated);
+      return updated;
+    });
+  }, [year]);
+
   const deleteDeduction = useCallback((id: string) => {
     setDeductions((prev) => {
       const updated = prev.filter((d) => d.id !== id);
@@ -114,6 +122,7 @@ export function useDeductions(year: number) {
     addDeduction,
     importDeductions,
     checkDuplicate,
+    updateDeduction,
     deleteDeduction,
     total,
     totalByCategory,

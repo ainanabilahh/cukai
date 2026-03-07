@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
-import { Trash2, ImageIcon, Eye, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, ImageIcon, Eye, Paperclip, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,9 +11,10 @@ import { toast } from "sonner";
 interface Props {
   deductions: Deduction[];
   onDelete: (id: string) => void;
+  onAttachReceipt?: (id: string, receiptFileName: string) => void;
 }
 
-export function DeductionList({ deductions, onDelete }: Props) {
+export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) {
   const fileStorage = useFileStorageContext();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string; deduction: Deduction } | null>(null);
@@ -57,6 +58,38 @@ export function DeductionList({ deductions, onDelete }: Props) {
     a.href = viewingReceipt.url;
     a.download = viewingReceipt.deduction.receiptImage || "receipt";
     a.click();
+  };
+
+  const ensureStorage = async (): Promise<boolean> => {
+    if (!fileStorage.isSupported) return false;
+    if (fileStorage.isReady) return true;
+    toast.info("Please choose a folder to save your files");
+    return await fileStorage.pickDirectory();
+  };
+
+  const handleAttachReceipt = async (deduction: Deduction, file: File) => {
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      toast.error("Please upload an image or PDF file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("File must be under 10MB");
+      return;
+    }
+    const storageReady = await ensureStorage();
+    if (storageReady) {
+      const ext = isImage ? "jpg" : "pdf";
+      const fileName = `receipt-${deduction.id}.${ext}`;
+      const saved = await fileStorage.saveFile(fileName, file);
+      if (!saved) {
+        toast.error("Failed to save receipt");
+        return;
+      }
+      onAttachReceipt?.(deduction.id, fileName);
+      toast.success("Receipt attached!");
+    }
   };
 
   const toggleExpand = (id: string) => {
@@ -169,7 +202,7 @@ export function DeductionList({ deductions, onDelete }: Props) {
                   <Separator />
 
                   <div className="flex items-center gap-2">
-                    {d.receiptImage && (
+                    {d.receiptImage ? (
                       <Button
                         variant="outline"
                         size="sm"
@@ -179,9 +212,26 @@ export function DeductionList({ deductions, onDelete }: Props) {
                           handleViewReceipt(d);
                         }}
                       >
-                        <ImageIcon className="h-3.5 w-3.5" />
+                        <Eye className="h-3.5 w-3.5" />
                         View Receipt
                       </Button>
+                    ) : (
+                      <label className="cursor-pointer" onClick={(e) => e.stopPropagation()}>
+                        <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none">
+                          <Paperclip className="h-3.5 w-3.5" />
+                          Attach Receipt
+                        </Button>
+                        <input
+                          type="file"
+                          accept="image/*,application/pdf"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handleAttachReceipt(d, file);
+                            e.target.value = "";
+                          }}
+                        />
+                      </label>
                     )}
                     <div className="flex-1" />
                     <Button

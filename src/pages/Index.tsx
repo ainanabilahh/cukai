@@ -29,6 +29,7 @@ const Index = () => {
     addDeduction,
     importDeductions,
     checkDuplicate,
+    updateDeduction,
     deleteDeduction,
     total,
     totalByCategory,
@@ -160,7 +161,11 @@ const Index = () => {
                   filterCategory={filterCategory}
                   onFilterChange={setFilterCategory}
                 />
-                <DeductionList deductions={filteredDeductions} onDelete={deleteDeduction} />
+                <DeductionList
+                  deductions={filteredDeductions}
+                  onDelete={deleteDeduction}
+                  onAttachReceipt={(id, fileName) => updateDeduction(id, { receiptImage: fileName })}
+                />
               </CardContent>
             </Card>
           </div>
