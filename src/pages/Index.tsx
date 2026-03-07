@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Receipt, TrendingUp, Layers } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
@@ -145,8 +146,6 @@ const Index = () => {
         {/* Tax Calculator */}
         <TaxCalculator totalDeductions={total} zakatAmount={zakatAmount} />
 
-        {/* Charts */}
-        <DashboardCharts totalByCategory={totalByCategory} deductions={deductions} />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
