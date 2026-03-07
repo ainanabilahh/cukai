@@ -29,6 +29,7 @@ const Index = () => {
     addDeduction,
     importDeductions,
     checkDuplicate,
+    updateDeduction,
     deleteDeduction,
     total,
     totalByCategory,
