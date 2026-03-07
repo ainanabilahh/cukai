@@ -1,36 +1,126 @@
 export type DeductionCategory =
-  | "Medical"
-  | "Education"
+  | "Individual & Dependants"
+  | "Parents Medical"
+  | "Basic Supporting Equipment"
+  | "Disabled Individual"
+  | "Education Fees (Self)"
+  | "Medical Expenses"
+  | "Learning Disability"
   | "Lifestyle"
-  | "Sports Equipment"
+  | "Additional Lifestyle"
+  | "Breastfeeding Equipment"
+  | "Childcare Fees"
   | "SSPN"
-  | "Insurance"
-  | "Zakat"
+  | "Spouse / Alimony"
+  | "Disabled Spouse"
+  | "Child (Under 18)"
+  | "Child (18+ Studying)"
+  | "Child (Disabled)"
+  | "Life Insurance & EPF"
+  | "EPF (Voluntary/Approved)"
+  | "Private Retirement Scheme"
+  | "Education & Medical Insurance"
+  | "SOCSO / EIS"
+  | "EV Charging / Green Tech"
+  | "Housing Loan Interest"
   | "Donations"
-  | "Others";
+  | "Zakat";
 
 export const CATEGORIES: DeductionCategory[] = [
-  "Medical",
-  "Education",
+  "Individual & Dependants",
+  "Parents Medical",
+  "Basic Supporting Equipment",
+  "Disabled Individual",
+  "Education Fees (Self)",
+  "Medical Expenses",
+  "Learning Disability",
   "Lifestyle",
-  "Sports Equipment",
+  "Additional Lifestyle",
+  "Breastfeeding Equipment",
+  "Childcare Fees",
   "SSPN",
-  "Insurance",
-  "Zakat",
+  "Spouse / Alimony",
+  "Disabled Spouse",
+  "Child (Under 18)",
+  "Child (18+ Studying)",
+  "Child (Disabled)",
+  "Life Insurance & EPF",
+  "EPF (Voluntary/Approved)",
+  "Private Retirement Scheme",
+  "Education & Medical Insurance",
+  "SOCSO / EIS",
+  "EV Charging / Green Tech",
+  "Housing Loan Interest",
   "Donations",
-  "Others",
+  "Zakat",
 ];
 
 export const CATEGORY_LIMITS: Record<DeductionCategory, number> = {
-  Medical: 10000,
-  Education: 7000,
-  Lifestyle: 2500,
-  "Sports Equipment": 1000,
-  SSPN: 8000,
-  Insurance: 7000,
-  Zakat: Infinity,
-  Donations: Infinity,
-  Others: Infinity,
+  "Individual & Dependants": 9000,
+  "Parents Medical": 8000,
+  "Basic Supporting Equipment": 6000,
+  "Disabled Individual": 7000,
+  "Education Fees (Self)": 7000,
+  "Medical Expenses": 10000,
+  "Learning Disability": 6000,
+  "Lifestyle": 2500,
+  "Additional Lifestyle": 1000,
+  "Breastfeeding Equipment": 1000,
+  "Childcare Fees": 3000,
+  "SSPN": 8000,
+  "Spouse / Alimony": 4000,
+  "Disabled Spouse": 6000,
+  "Child (Under 18)": Infinity,
+  "Child (18+ Studying)": Infinity,
+  "Child (Disabled)": Infinity,
+  "Life Insurance & EPF": 3000,
+  "EPF (Voluntary/Approved)": 4000,
+  "Private Retirement Scheme": 3000,
+  "Education & Medical Insurance": 4000,
+  "SOCSO / EIS": 350,
+  "EV Charging / Green Tech": 2500,
+  "Housing Loan Interest": Infinity,
+  "Donations": Infinity,
+  "Zakat": Infinity,
+};
+
+export const CATEGORY_GROUPS: Record<string, DeductionCategory[]> = {
+  "Personal Relief": [
+    "Individual & Dependants",
+    "Disabled Individual",
+    "Education Fees (Self)",
+    "Lifestyle",
+    "Additional Lifestyle",
+  ],
+  "Family": [
+    "Spouse / Alimony",
+    "Disabled Spouse",
+    "Child (Under 18)",
+    "Child (18+ Studying)",
+    "Child (Disabled)",
+    "Childcare Fees",
+    "Breastfeeding Equipment",
+  ],
+  "Medical": [
+    "Parents Medical",
+    "Medical Expenses",
+    "Basic Supporting Equipment",
+    "Learning Disability",
+  ],
+  "Insurance & Savings": [
+    "Life Insurance & EPF",
+    "EPF (Voluntary/Approved)",
+    "Private Retirement Scheme",
+    "Education & Medical Insurance",
+    "SOCSO / EIS",
+    "SSPN",
+  ],
+  "Others": [
+    "EV Charging / Green Tech",
+    "Housing Loan Interest",
+    "Donations",
+    "Zakat",
+  ],
 };
 
 export interface Deduction {
@@ -40,15 +130,3 @@ export interface Deduction {
   date: string;
   description: string;
 }
-
-export const CATEGORY_COLORS: Record<DeductionCategory, string> = {
-  Medical: "hsl(var(--chart-1))",
-  Education: "hsl(var(--chart-2))",
-  Lifestyle: "hsl(var(--chart-3))",
-  "Sports Equipment": "hsl(var(--chart-4))",
-  SSPN: "hsl(var(--chart-5))",
-  Insurance: "hsl(174, 40%, 50%)",
-  Zakat: "hsl(42, 60%, 45%)",
-  Donations: "hsl(200, 40%, 40%)",
-  Others: "hsl(200, 10%, 50%)",
-};
