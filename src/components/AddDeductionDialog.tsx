@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Upload, X, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,29 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { toast } from "sonner";
 
 interface Props {
-  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string }) => void;
+  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImage?: string }) => void;
+}
+
+function compressImage(file: File, maxWidth = 800): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new window.Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ratio = Math.min(maxWidth / img.width, 1);
+        canvas.width = img.width * ratio;
+        canvas.height = img.height * ratio;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/jpeg", 0.6));
+      };
+      img.onerror = reject;
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
 }
 
 export function AddDeductionDialog({ onAdd }: Props) {
@@ -22,6 +44,31 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const [amount, setAmount] = useState("");
   const [date, setDate] = useState<Date>(new Date());
   const [description, setDescription] = useState("");
+  const [receiptImage, setReceiptImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Image must be under 10MB");
+      return;
+    }
+    setUploading(true);
+    try {
+      const compressed = await compressImage(file);
+      setReceiptImage(compressed);
+      toast.success("Receipt uploaded!");
+    } catch {
+      toast.error("Failed to process image");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = () => {
     const num = parseFloat(amount);
@@ -33,10 +80,17 @@ export function AddDeductionDialog({ onAdd }: Props) {
       toast.error("Please enter a description");
       return;
     }
-    onAdd({ category, amount: num, date: format(date, "yyyy-MM-dd"), description: description.trim() });
+    onAdd({
+      category,
+      amount: num,
+      date: format(date, "yyyy-MM-dd"),
+      description: description.trim(),
+      receiptImage: receiptImage || undefined,
+    });
     toast.success("Deduction added successfully!");
     setAmount("");
     setDescription("");
+    setReceiptImage(null);
     setOpen(false);
   };
 
@@ -48,11 +102,49 @@ export function AddDeductionDialog({ onAdd }: Props) {
           Add Deduction
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display text-xl">Add Tax Deduction</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-2">
+          {/* Receipt Upload */}
+          <div className="space-y-2">
+            <Label>Receipt (optional)</Label>
+            {receiptImage ? (
+              <div className="relative rounded-lg border overflow-hidden">
+                <img src={receiptImage} alt="Receipt" className="w-full max-h-48 object-contain bg-muted" />
+                <Button
+                  variant="destructive"
+                  size="icon"
+                  className="absolute top-2 right-2 h-7 w-7"
+                  onClick={() => setReceiptImage(null)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <label className="flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-6 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
+                  {uploading ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                  ) : (
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  {uploading ? "Processing..." : "Click to upload receipt image"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                  disabled={uploading}
+                />
+              </label>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label>Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as DeductionCategory)}>
