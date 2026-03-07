@@ -9,6 +9,9 @@ import { DeductionList } from "@/components/DeductionList";
 import { DeductionFilters } from "@/components/DeductionFilters";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
+import { DashboardCharts } from "@/components/DashboardCharts";
+import { DataImportExport } from "@/components/DataImportExport";
+import { PrintSummary } from "@/components/PrintSummary";
 
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
@@ -16,8 +19,11 @@ const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
 const Index = () => {
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const {
+    deductions,
     filteredDeductions,
     addDeduction,
+    importDeductions,
+    checkDuplicate,
     deleteDeduction,
     total,
     totalByCategory,
@@ -27,7 +33,6 @@ const Index = () => {
     filterCategory,
     setFilterCategory,
     switchYear,
-    deductions,
   } = useDeductions(selectedYear);
 
   const categoryCount = Object.keys(totalByCategory).length;
@@ -65,12 +70,20 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <AddDeductionDialog onAdd={addDeduction} />
+            <AddDeductionDialog onAdd={addDeduction} checkDuplicate={checkDuplicate} />
           </div>
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 space-y-6">
+        {/* Action bar */}
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-2 flex-wrap">
+            <DataImportExport deductions={deductions} year={selectedYear} onImport={importDeductions} />
+            <PrintSummary deductions={deductions} totalByCategory={totalByCategory} total={total} year={selectedYear} />
+          </div>
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-3">
           <Card>
             <CardContent className="flex items-center gap-4 p-5">
@@ -109,6 +122,9 @@ const Index = () => {
 
         {/* EA Forms Section */}
         <EAFormSection />
+
+        {/* Charts */}
+        <DashboardCharts totalByCategory={totalByCategory} deductions={deductions} />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
