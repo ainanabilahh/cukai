@@ -47,7 +47,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
     try {
       const id = crypto.randomUUID();
       const ext = isImage ? "jpg" : "pdf";
-      const fileName = `be-form-${year}-${id}.${ext}`;
+      const fileName = `${year}/be-form/be-form-${id}.${ext}`;
 
       if (storageReady) {
         const saved = await fileStorage.saveFile(fileName, file);

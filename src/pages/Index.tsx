@@ -145,7 +145,7 @@ const Index = () => {
 
         {/* Forms */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <EAFormSection />
+          <EAFormSection year={selectedYear} />
           <BEFormSection year={selectedYear} />
         </div>
 
