@@ -4,12 +4,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CATEGORY_LIMITS, DeductionCategory, Deduction, MONTHS } from "@/lib/deduction-data";
 
 const COLORS = [
-  "hsl(265, 85%, 65%)",
+  "hsl(210, 85%, 55%)",
   "hsl(38, 92%, 55%)",
   "hsl(152, 55%, 42%)",
-  "hsl(280, 70%, 55%)",
-  "hsl(0, 72%, 55%)",
   "hsl(200, 70%, 50%)",
+  "hsl(0, 72%, 55%)",
+  "hsl(180, 60%, 45%)",
   "hsl(330, 70%, 55%)",
   "hsl(60, 70%, 45%)",
 ];
@@ -74,7 +74,7 @@ export function DashboardCharts({ totalByCategory, deductions }: Props) {
                 </Pie>
                 <Tooltip
                   formatter={(value: number) => `RM ${value.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`}
-                  contentStyle={{ backgroundColor: "hsl(270, 35%, 9%)", border: "1px solid hsl(270, 20%, 18%)", borderRadius: "0.5rem", color: "hsl(270, 20%, 91%)" }}
+                  contentStyle={{ backgroundColor: "hsl(215, 35%, 9%)", border: "1px solid hsl(215, 20%, 18%)", borderRadius: "0.5rem", color: "hsl(210, 20%, 91%)" }}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -82,13 +82,13 @@ export function DashboardCharts({ totalByCategory, deductions }: Props) {
           <TabsContent value="monthly" className="pt-4">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={monthlyData}>
-                <XAxis dataKey="month" fontSize={12} stroke="hsl(270, 15%, 55%)" />
-                <YAxis fontSize={12} stroke="hsl(270, 15%, 55%)" />
+                <XAxis dataKey="month" fontSize={12} stroke="hsl(215, 15%, 55%)" />
+                <YAxis fontSize={12} stroke="hsl(215, 15%, 55%)" />
                 <Tooltip
                   formatter={(value: number) => `RM ${value.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`}
-                  contentStyle={{ backgroundColor: "hsl(270, 35%, 9%)", border: "1px solid hsl(270, 20%, 18%)", borderRadius: "0.5rem", color: "hsl(270, 20%, 91%)" }}
+                  contentStyle={{ backgroundColor: "hsl(215, 35%, 9%)", border: "1px solid hsl(215, 20%, 18%)", borderRadius: "0.5rem", color: "hsl(210, 20%, 91%)" }}
                 />
-                <Bar dataKey="amount" fill="hsl(265, 85%, 65%)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="amount" fill="hsl(210, 85%, 55%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </TabsContent>
