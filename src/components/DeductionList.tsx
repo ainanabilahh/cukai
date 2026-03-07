@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Deduction } from "@/lib/deduction-data";
-import { Trash2, ImageIcon, ZoomIn, ZoomOut, RotateCw, Download } from "lucide-react";
+import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
+import { Trash2, ImageIcon, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -15,13 +15,13 @@ interface Props {
 
 export function DeductionList({ deductions, onDelete }: Props) {
   const fileStorage = useFileStorageContext();
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string; deduction: Deduction } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
 
   const handleViewReceipt = async (deduction: Deduction) => {
     const receiptImage = deduction.receiptImage!;
-    // Legacy: base64 data URL
     if (receiptImage.startsWith("data:")) {
       const type = receiptImage.startsWith("data:application/pdf") ? "pdf" : "image";
       setViewingReceipt({ url: receiptImage, type, deduction });
@@ -29,7 +29,6 @@ export function DeductionList({ deductions, onDelete }: Props) {
       setRotation(0);
       return;
     }
-    // New: filename in storage folder
     if (fileStorage.isReady) {
       const url = await fileStorage.readFile(receiptImage);
       if (url) {
@@ -60,6 +59,10 @@ export function DeductionList({ deductions, onDelete }: Props) {
     a.click();
   };
 
+  const toggleExpand = (id: string) => {
+    setExpandedId((prev) => (prev === id ? null : id));
+  };
+
   if (deductions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
@@ -72,36 +75,118 @@ export function DeductionList({ deductions, onDelete }: Props) {
   return (
     <>
       <div className="space-y-2">
-        {deductions.map((d) => (
-          <div key={d.id} className="flex items-center justify-between rounded-lg border bg-card p-4 transition-colors hover:bg-secondary/50">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <Badge variant="secondary" className="text-xs font-medium">{d.category}</Badge>
-                <Badge variant="outline" className="text-xs">{d.frequency === "monthly" ? d.month : "Yearly"}</Badge>
-                <span className="text-xs text-muted-foreground">{d.date}</span>
-                {d.receiptImage && (
-                  <button
-                    onClick={() => handleViewReceipt(d)}
-                    className="inline-flex items-center gap-1 text-xs text-primary hover:text-primary/80 transition-colors"
-                    title="View receipt"
-                  >
-                    <ImageIcon className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline">View</span>
-                  </button>
-                )}
-              </div>
-              <p className="text-sm truncate">{d.description}</p>
+        {deductions.map((d) => {
+          const isExpanded = expandedId === d.id;
+          const limit = CATEGORY_LIMITS[d.category as DeductionCategory];
+          const hasLimit = limit !== Infinity;
+
+          return (
+            <div
+              key={d.id}
+              className="rounded-lg border bg-card transition-colors overflow-hidden"
+            >
+              {/* Clickable row */}
+              <button
+                type="button"
+                className="flex items-center justify-between w-full p-4 text-left transition-colors hover:bg-secondary/50"
+                onClick={() => toggleExpand(d.id)}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <Badge variant="secondary" className="text-xs font-medium">{d.category}</Badge>
+                    <Badge variant="outline" className="text-xs">{d.frequency === "monthly" ? d.month : "Yearly"}</Badge>
+                    <span className="text-xs text-muted-foreground">{d.date}</span>
+                    {d.receiptImage && (
+                      <Badge variant="outline" className="text-xs gap-1">
+                        <ImageIcon className="h-3 w-3" />
+                        Receipt
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm truncate">{d.description}</p>
+                </div>
+                <div className="flex items-center gap-3 ml-4">
+                  <span className="font-display font-semibold text-primary whitespace-nowrap">
+                    RM {d.amount.toLocaleString("en-MY", { minimumFractionDigits: 2 })}
+                  </span>
+                  {isExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </div>
+              </button>
+
+              {/* Expanded details */}
+              {isExpanded && (
+                <div className="border-t bg-muted/30 px-4 py-3 space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2 text-sm">
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Category</p>
+                      <p className="font-medium">{d.category}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Amount</p>
+                      <p className="font-display font-semibold text-primary">
+                        RM {d.amount.toLocaleString("en-MY", { minimumFractionDigits: 2 })}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Date</p>
+                      <p>{d.date}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Frequency</p>
+                      <p>{d.frequency === "monthly" ? `Monthly — ${d.month}` : "Yearly"}</p>
+                    </div>
+                    {hasLimit && (
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Category Limit</p>
+                        <p>RM {limit.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</p>
+                      </div>
+                    )}
+                    <div className="sm:col-span-2">
+                      <p className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">Description</p>
+                      <p>{d.description}</p>
+                    </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center gap-2">
+                    {d.receiptImage && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-1.5"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewReceipt(d);
+                        }}
+                      >
+                        <ImageIcon className="h-3.5 w-3.5" />
+                        View Receipt
+                      </Button>
+                    )}
+                    <div className="flex-1" />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground hover:text-destructive gap-1.5"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(d.id);
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-3 ml-4">
-              <span className="font-display font-semibold text-primary whitespace-nowrap">
-                RM {d.amount.toLocaleString("en-MY", { minimumFractionDigits: 2 })}
-              </span>
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => onDelete(d.id)}>
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <Dialog open={!!viewingReceipt} onOpenChange={handleClose}>
@@ -112,7 +197,6 @@ export function DeductionList({ deductions, onDelete }: Props) {
 
           {viewingReceipt && (
             <div className="flex flex-col gap-4 overflow-hidden flex-1">
-              {/* Deduction details */}
               <div className="rounded-lg bg-muted/50 p-3 space-y-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <Badge variant="secondary" className="text-xs">{viewingReceipt.deduction.category}</Badge>
@@ -131,48 +215,24 @@ export function DeductionList({ deductions, onDelete }: Props) {
 
               <Separator />
 
-              {/* Image controls (only for images, not PDFs) */}
               {viewingReceipt.type === "image" && (
                 <div className="flex items-center justify-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))}
-                    disabled={zoom <= 0.5}
-                  >
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.max(0.5, z - 0.25))} disabled={zoom <= 0.5}>
                     <ZoomOut className="h-4 w-4" />
                   </Button>
                   <span className="text-xs text-muted-foreground w-12 text-center">{Math.round(zoom * 100)}%</span>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setZoom((z) => Math.min(3, z + 0.25))}
-                    disabled={zoom >= 3}
-                  >
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setZoom((z) => Math.min(3, z + 0.25))} disabled={zoom >= 3}>
                     <ZoomIn className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => setRotation((r) => (r + 90) % 360)}
-                  >
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setRotation((r) => (r + 90) % 360)}>
                     <RotateCw className="h-4 w-4" />
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={handleDownload}
-                  >
+                  <Button variant="outline" size="icon" className="h-8 w-8" onClick={handleDownload}>
                     <Download className="h-4 w-4" />
                   </Button>
                 </div>
               )}
 
-              {/* Receipt viewer */}
               <div className="flex-1 overflow-auto rounded-lg border bg-muted/30 min-h-0">
                 {viewingReceipt.type === "pdf" ? (
                   <iframe src={viewingReceipt.url} className="w-full h-[60vh] rounded-lg" title="Receipt PDF" />
@@ -182,10 +242,7 @@ export function DeductionList({ deductions, onDelete }: Props) {
                       src={viewingReceipt.url}
                       alt="Receipt"
                       className="max-w-full rounded-lg transition-transform duration-200"
-                      style={{
-                        transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                        transformOrigin: "center center",
-                      }}
+                      style={{ transform: `scale(${zoom}) rotate(${rotation}deg)`, transformOrigin: "center center" }}
                     />
                   </div>
                 )}
