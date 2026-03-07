@@ -41,7 +41,14 @@ export function DashboardCharts({ totalByCategory, deductions }: Props) {
   });
 
   if (pieData.length === 0) {
-    return null;
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+          <p className="text-lg">No chart data yet</p>
+          <p className="text-sm">Add deductions to see charts</p>
+        </CardContent>
+      </Card>
+    );
   }
 
   return (
