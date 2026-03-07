@@ -22,6 +22,7 @@ const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const fileStorage = useFileStorageContext();
   const {
