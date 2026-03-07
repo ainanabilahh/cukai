@@ -50,21 +50,34 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please upload an image file");
+    const isImage = file.type.startsWith("image/");
+    const isPdf = file.type === "application/pdf";
+    if (!isImage && !isPdf) {
+      toast.error("Please upload an image or PDF file");
       return;
     }
     if (file.size > 10 * 1024 * 1024) {
-      toast.error("Image must be under 10MB");
+      toast.error("File must be under 10MB");
       return;
     }
     setUploading(true);
     try {
-      const compressed = await compressImage(file);
-      setReceiptImage(compressed);
+      if (isImage) {
+        const compressed = await compressImage(file);
+        setReceiptImage(compressed);
+      } else {
+        // Store PDF as base64 data URL
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        setReceiptImage(dataUrl);
+      }
       toast.success("Receipt uploaded!");
     } catch {
-      toast.error("Failed to process image");
+      toast.error("Failed to process file");
     } finally {
       setUploading(false);
     }
