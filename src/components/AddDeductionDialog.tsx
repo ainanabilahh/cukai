@@ -110,6 +110,17 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           }
           savedFileNames.push(fileName);
         }
+      } else {
+        // Fallback: convert files to base64 data URLs
+        for (const receipt of receiptFiles) {
+          const dataUrl = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = () => reject(reader.error);
+            reader.readAsDataURL(receipt.file);
+          });
+          savedFileNames.push(dataUrl);
+        }
       }
     }
 

@@ -101,6 +101,8 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
       toast.error("File must be under 10MB");
       return;
     }
+
+    // Try saving to file system storage first
     const storageReady = await ensureStorage();
     if (storageReady) {
       const ext = isImage ? "jpg" : "pdf";
@@ -112,7 +114,18 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt }: Props) 
       }
       onAttachReceipt?.(deduction.id, fileName);
       toast.success("Receipt attached!");
+      return;
     }
+
+    // Fallback: store as base64 data URL when file system not available
+    const reader = new FileReader();
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      onAttachReceipt?.(deduction.id, dataUrl);
+      toast.success("Receipt attached!");
+    };
+    reader.onerror = () => toast.error("Failed to read file");
+    reader.readAsDataURL(file);
   };
 
   const toggleExpand = (id: string) => {
