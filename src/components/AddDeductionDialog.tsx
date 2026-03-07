@@ -47,7 +47,12 @@ export function AddDeductionDialog({ onAdd }: Props) {
   const [receiptImage, setReceiptImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [frequency, setFrequency] = useState<DeductionFrequency>("yearly");
-  const [month, setMonth] = useState<string>("");
+  const [month, setMonth] = useState<string>(MONTHS[new Date().getMonth()]);
+
+  const handleDateChange = (d: Date) => {
+    setDate(d);
+    setMonth(MONTHS[d.getMonth()]);
+  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -228,7 +233,7 @@ export function AddDeductionDialog({ onAdd }: Props) {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date} onSelect={(d) => d && setDate(d)} initialFocus className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={date} onSelect={(d) => d && handleDateChange(d)} initialFocus className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
