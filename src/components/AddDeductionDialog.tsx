@@ -2,14 +2,14 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { CATEGORIES, DeductionCategory } from "@/lib/deduction-data";
+import { CATEGORIES, CATEGORY_GROUPS, DeductionCategory } from "@/lib/deduction-data";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface Props {
@@ -57,9 +57,14 @@ export function AddDeductionDialog({ onAdd }: Props) {
             <Label>Category</Label>
             <Select value={category} onValueChange={(v) => setCategory(v as DeductionCategory)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+              <SelectContent className="max-h-72">
+                {Object.entries(CATEGORY_GROUPS).map(([group, cats]) => (
+                  <SelectGroup key={group}>
+                    <SelectLabel className="font-display font-semibold text-xs uppercase tracking-wider text-muted-foreground">{group}</SelectLabel>
+                    {cats.map((c) => (
+                      <SelectItem key={c} value={c}>{c}</SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
