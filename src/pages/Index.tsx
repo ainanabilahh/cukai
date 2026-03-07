@@ -1,4 +1,5 @@
 import { Receipt, TrendingUp, Layers } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDeductions } from "@/hooks/useDeductions";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
