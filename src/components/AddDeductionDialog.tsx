@@ -285,20 +285,22 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
             <Label>Amount (RM) <span className="text-destructive">*</span></Label>
             <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
           </div>
-          <div className="space-y-2">
-            <Label>Date <span className="text-destructive">*</span></Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date ? format(date, "dd MMM yyyy") : "Pick a date"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date} onSelect={(d) => d && handleDateChange(d)} initialFocus className="p-3 pointer-events-auto" />
-              </PopoverContent>
-            </Popover>
-          </div>
+          {frequency === "monthly" && (
+            <div className="space-y-2">
+              <Label>Date <span className="text-destructive">*</span></Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !date && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {date ? format(date, "dd MMM yyyy") : "Pick a date"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={date} onSelect={(d) => d && handleDateChange(d)} initialFocus className="p-3 pointer-events-auto" />
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
           {frequency === "monthly" && (
             <div className="space-y-2">
               <Label>Month <span className="text-destructive">*</span></Label>
