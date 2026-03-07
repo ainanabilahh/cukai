@@ -25,7 +25,7 @@ export function StorageSettings() {
           <Settings className="h-4 w-4" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="sm:max-w-md max-w-[calc(100vw-2rem)]">
         <DialogHeader>
           <DialogTitle className="font-display">Storage Settings</DialogTitle>
         </DialogHeader>
@@ -38,9 +38,9 @@ export function StorageSettings() {
             <>
               <div className="space-y-2">
                 <Label className="text-sm font-medium">Files Storage Folder</Label>
-                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3 overflow-hidden">
+                <div className="flex items-center gap-2 rounded-lg border bg-muted/50 p-3">
                   <FolderOpen className="h-4 w-4 text-primary shrink-0" />
-                  <span className="text-sm truncate flex-1 min-w-0" title={directoryName ?? ""}>
+                  <span className="text-sm break-all flex-1 min-w-0" title={directoryName ?? ""}>
                     {directoryName ?? "No folder selected"}
                   </span>
                 </div>

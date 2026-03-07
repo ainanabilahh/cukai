@@ -205,7 +205,7 @@ export function useFileStorage() {
         for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
         const fh = await dir.getFileHandle(fileName, { create: true });
         const writable = await fh.createWritable();
-        await writable.write(new Blob([bytes]));
+        await writable.write(new Blob([bytes.buffer as ArrayBuffer]));
         await writable.close();
         return true;
       } catch (err) { console.error("saveFile browser error:", err); return false; }
@@ -228,7 +228,7 @@ export function useFileStorage() {
           const base = await getBaseDir();
           bytes = await tauriReadFile(`files/${filePath}`, { baseDir: base });
         }
-        return URL.createObjectURL(new Blob([bytes], { type: mime }));
+        return URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer as ArrayBuffer)], { type: mime }));
       } catch { return null; }
     } else {
       if (!browserHandle) return null;
