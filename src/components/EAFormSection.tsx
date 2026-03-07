@@ -9,7 +9,11 @@ import { useEAForms, EAForm } from "@/hooks/useEAForms";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
 
-export function EAFormSection() {
+interface EAFormSectionProps {
+  year: number;
+}
+
+export function EAFormSection({ year }: EAFormSectionProps) {
   const { forms, addForm, deleteForm } = useEAForms();
   const fileStorage = useFileStorageContext();
   const [employerName, setEmployerName] = useState("");
@@ -49,10 +53,9 @@ export function EAFormSection() {
     try {
       const id = crypto.randomUUID();
       const ext = isImage ? "jpg" : "pdf";
-      const fileName = `ea-form-${id}.${ext}`;
+      const fileName = `${year}/ea-form/ea-form-${id}.${ext}`;
 
       if (storageReady) {
-        // Save to device folder
         const saved = await fileStorage.saveFile(fileName, file);
         if (!saved) {
           toast.error("Failed to save file to folder");
