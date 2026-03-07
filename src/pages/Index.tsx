@@ -13,7 +13,7 @@ import { DeductionList } from "@/components/DeductionList";
 import { DeductionFilters } from "@/components/DeductionFilters";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
-import { DashboardCharts } from "@/components/DashboardCharts";
+
 import { TaxCalculator } from "@/components/TaxCalculator";
 import { BEFormSection } from "@/components/BEFormSection";
 import { DataImportExport } from "@/components/DataImportExport";
