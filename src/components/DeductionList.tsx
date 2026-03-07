@@ -4,6 +4,8 @@ import { Trash2, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { toast } from "sonner";
 
 interface Props {
   deductions: Deduction[];
@@ -11,7 +13,34 @@ interface Props {
 }
 
 export function DeductionList({ deductions, onDelete }: Props) {
-  const [viewingReceipt, setViewingReceipt] = useState<string | null>(null);
+  const fileStorage = useFileStorageContext();
+  const [viewingReceipt, setViewingReceipt] = useState<{ url: string; type: string } | null>(null);
+
+  const handleViewReceipt = async (receiptImage: string) => {
+    // Legacy: base64 data URL
+    if (receiptImage.startsWith("data:")) {
+      const type = receiptImage.startsWith("data:application/pdf") ? "pdf" : "image";
+      setViewingReceipt({ url: receiptImage, type });
+      return;
+    }
+    // New: filename in storage folder
+    if (fileStorage.isReady) {
+      const url = await fileStorage.readFile(receiptImage);
+      if (url) {
+        const type = receiptImage.endsWith(".pdf") ? "pdf" : "image";
+        setViewingReceipt({ url, type });
+        return;
+      }
+    }
+    toast.error("Cannot view receipt. Ensure storage folder is accessible in Settings.");
+  };
+
+  const handleClose = () => {
+    if (viewingReceipt && !viewingReceipt.url.startsWith("data:")) {
+      URL.revokeObjectURL(viewingReceipt.url);
+    }
+    setViewingReceipt(null);
+  };
 
   if (deductions.length === 0) {
     return (
@@ -34,7 +63,7 @@ export function DeductionList({ deductions, onDelete }: Props) {
                 <span className="text-xs text-muted-foreground">{d.date}</span>
                 {d.receiptImage && (
                   <button
-                    onClick={() => setViewingReceipt(d.receiptImage!)}
+                    onClick={() => handleViewReceipt(d.receiptImage!)}
                     className="text-primary hover:text-primary/80 transition-colors"
                     title="View receipt"
                   >
@@ -56,16 +85,16 @@ export function DeductionList({ deductions, onDelete }: Props) {
         ))}
       </div>
 
-      <Dialog open={!!viewingReceipt} onOpenChange={() => setViewingReceipt(null)}>
+      <Dialog open={!!viewingReceipt} onOpenChange={handleClose}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">Receipt</DialogTitle>
           </DialogHeader>
           {viewingReceipt && (
-            viewingReceipt.startsWith("data:application/pdf") ? (
-              <iframe src={viewingReceipt} className="w-full h-[70vh] rounded-lg" title="Receipt PDF" />
+            viewingReceipt.type === "pdf" ? (
+              <iframe src={viewingReceipt.url} className="w-full h-[70vh] rounded-lg" title="Receipt PDF" />
             ) : (
-              <img src={viewingReceipt} alt="Receipt" className="w-full rounded-lg" />
+              <img src={viewingReceipt.url} alt="Receipt" className="w-full rounded-lg" />
             )
           )}
         </DialogContent>

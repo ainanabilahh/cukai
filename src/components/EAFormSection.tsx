@@ -1,40 +1,28 @@
 import { useState } from "react";
-import { Upload, X, FileText, Trash2, Eye, Building2 } from "lucide-react";
+import { Upload, FileText, Trash2, Eye, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEAForms, EAForm } from "@/hooks/useEAForms";
+import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
-
-function compressImage(file: File, maxWidth = 1200): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new window.Image();
-      img.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ratio = Math.min(maxWidth / img.width, 1);
-        canvas.width = img.width * ratio;
-        canvas.height = img.height * ratio;
-        const ctx = canvas.getContext("2d")!;
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        resolve(canvas.toDataURL("image/jpeg", 0.7));
-      };
-      img.onerror = reject;
-      img.src = e.target?.result as string;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
 
 export function EAFormSection() {
   const { forms, addForm, deleteForm } = useEAForms();
+  const fileStorage = useFileStorageContext();
   const [employerName, setEmployerName] = useState("");
   const [uploading, setUploading] = useState(false);
   const [viewingForm, setViewingForm] = useState<EAForm | null>(null);
+  const [viewUrl, setViewUrl] = useState<string | null>(null);
+
+  const ensureStorage = async (): Promise<boolean> => {
+    if (!fileStorage.isSupported) return false;
+    if (fileStorage.isReady) return true;
+    toast.info("Please choose a folder to save your files");
+    return await fileStorage.pickDirectory();
+  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,20 +41,30 @@ export function EAFormSection() {
       toast.error("Please enter employer name first");
       return;
     }
+
+    // Ensure storage folder is selected (one-time prompt)
+    const storageReady = await ensureStorage();
+    
     setUploading(true);
     try {
-      let dataUrl: string;
-      if (isImage) {
-        dataUrl = await compressImage(file);
-      } else {
-        dataUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
+      const id = crypto.randomUUID();
+      const ext = isImage ? "jpg" : "pdf";
+      const fileName = `ea-form-${id}.${ext}`;
+
+      if (storageReady) {
+        // Save to device folder
+        const saved = await fileStorage.saveFile(fileName, file);
+        if (!saved) {
+          toast.error("Failed to save file to folder");
+          return;
+        }
       }
-      addForm({ employerName: employerName.trim(), file: dataUrl, fileType: isImage ? "image" : "pdf" });
+
+      addForm({
+        employerName: employerName.trim(),
+        fileName,
+        fileType: isImage ? "image" : "pdf",
+      });
       setEmployerName("");
       toast.success("EA Form uploaded!");
     } catch {
@@ -75,6 +73,31 @@ export function EAFormSection() {
       setUploading(false);
       e.target.value = "";
     }
+  };
+
+  const handleView = async (form: EAForm) => {
+    if (fileStorage.isReady) {
+      const url = await fileStorage.readFile(form.fileName);
+      if (url) {
+        setViewUrl(url);
+        setViewingForm(form);
+        return;
+      }
+    }
+    toast.error("Cannot view file. Please ensure storage folder is accessible in Settings.");
+  };
+
+  const handleDelete = async (form: EAForm) => {
+    if (fileStorage.isReady) {
+      await fileStorage.deleteFile(form.fileName);
+    }
+    deleteForm(form.id);
+  };
+
+  const handleCloseView = () => {
+    if (viewUrl) URL.revokeObjectURL(viewUrl);
+    setViewUrl(null);
+    setViewingForm(null);
   };
 
   return (
@@ -137,10 +160,10 @@ export function EAFormSection() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1 ml-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setViewingForm(form)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleView(form)}>
                       <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteForm(form.id)}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(form)}>
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
@@ -151,16 +174,16 @@ export function EAFormSection() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!viewingForm} onOpenChange={() => setViewingForm(null)}>
+      <Dialog open={!!viewingForm} onOpenChange={handleCloseView}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="font-display">EA Form — {viewingForm?.employerName}</DialogTitle>
           </DialogHeader>
-          {viewingForm && (
+          {viewingForm && viewUrl && (
             viewingForm.fileType === "pdf" ? (
-              <iframe src={viewingForm.file} className="w-full h-[70vh] rounded-lg" title="EA Form" />
+              <iframe src={viewUrl} className="w-full h-[70vh] rounded-lg" title="EA Form" />
             ) : (
-              <img src={viewingForm.file} alt="EA Form" className="w-full rounded-lg" />
+              <img src={viewUrl} alt="EA Form" className="w-full rounded-lg" />
             )
           )}
         </DialogContent>

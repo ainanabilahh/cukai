@@ -5,9 +5,11 @@ const STORAGE_KEY = "ea-forms";
 export interface EAForm {
   id: string;
   employerName: string;
-  file: string; // base64 data URL
+  fileName: string; // filename in storage folder
   fileType: string; // "image" or "pdf"
   uploadedAt: string;
+  /** @deprecated Legacy field - old base64 data URL */
+  file?: string;
 }
 
 function load(): EAForm[] {
@@ -20,13 +22,15 @@ function load(): EAForm[] {
 }
 
 function save(forms: EAForm[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(forms));
+  // Strip any legacy base64 data before saving to keep localStorage lean
+  const clean = forms.map(({ file, ...rest }) => rest);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(clean));
 }
 
 export function useEAForms() {
   const [forms, setForms] = useState<EAForm[]>(load);
 
-  const addForm = useCallback((form: Omit<EAForm, "id" | "uploadedAt">) => {
+  const addForm = useCallback((form: Omit<EAForm, "id" | "uploadedAt" | "file">) => {
     const newForm: EAForm = { ...form, id: crypto.randomUUID(), uploadedAt: new Date().toISOString() };
     setForms((prev) => {
       const updated = [newForm, ...prev];
