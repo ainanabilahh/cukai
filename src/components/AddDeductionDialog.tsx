@@ -206,19 +206,6 @@ export function AddDeductionDialog({ onAdd }: Props) {
               </SelectContent>
             </Select>
           </div>
-          {frequency === "monthly" && (
-            <div className="space-y-2">
-              <Label>Month</Label>
-              <Select value={month} onValueChange={setMonth}>
-                <SelectTrigger><SelectValue placeholder="Select month" /></SelectTrigger>
-                <SelectContent>
-                  {MONTHS.map((m) => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          )}
           <div className="space-y-2">
             <Label>Amount (RM)</Label>
             <Input type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} min="0" step="0.01" />
@@ -237,6 +224,19 @@ export function AddDeductionDialog({ onAdd }: Props) {
               </PopoverContent>
             </Popover>
           </div>
+          {frequency === "monthly" && (
+            <div className="space-y-2">
+              <Label>Month</Label>
+              <Select value={month} onValueChange={setMonth}>
+                <SelectTrigger><SelectValue placeholder="Select month" /></SelectTrigger>
+                <SelectContent>
+                  {MONTHS.map((m) => (
+                    <SelectItem key={m} value={m}>{m}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label>Description</Label>
             <Input placeholder="e.g. Pharmacy medicine" value={description} onChange={(e) => setDescription(e.target.value)} />
