@@ -169,6 +169,7 @@ const Index = () => {
                 <DeductionList
                   deductions={filteredDeductions}
                   onDelete={deleteDeduction}
+                  year={selectedYear}
                   onAttachReceipt={(id, fileName) => {
                     const existing = deductions.find(d => d.id === id);
                     const current = existing?.receiptImages || [];
