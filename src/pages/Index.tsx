@@ -134,8 +134,6 @@ const Index = () => {
           </Card>
         </div>
 
-        {/* EA Forms Section */}
-        <EAFormSection />
 
         {/* Forms */}
         <div className="grid gap-6 lg:grid-cols-2">
