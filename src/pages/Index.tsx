@@ -1,7 +1,9 @@
 import { useState } from "react";
-import { Receipt, TrendingUp, Layers } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Receipt, TrendingUp, Layers, BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeductions } from "@/hooks/useDeductions";
@@ -11,7 +13,7 @@ import { DeductionList } from "@/components/DeductionList";
 import { DeductionFilters } from "@/components/DeductionFilters";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
-import { DashboardCharts } from "@/components/DashboardCharts";
+
 import { TaxCalculator } from "@/components/TaxCalculator";
 import { BEFormSection } from "@/components/BEFormSection";
 import { DataImportExport } from "@/components/DataImportExport";
@@ -21,6 +23,7 @@ const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
 
 const Index = () => {
+  const navigate = useNavigate();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const fileStorage = useFileStorageContext();
   const {
@@ -96,6 +99,10 @@ const Index = () => {
           <div className="flex items-center gap-2 flex-wrap">
             <DataImportExport deductions={deductions} year={selectedYear} onImport={importDeductions} />
             <PrintSummary deductions={deductions} totalByCategory={totalByCategory} total={total} year={selectedYear} />
+            <Button variant="outline" className="gap-2" onClick={() => navigate(`/charts?year=${selectedYear}`)}>
+              <BarChart3 className="h-4 w-4" />
+              View Charts
+            </Button>
           </div>
         </div>
 
@@ -145,8 +152,6 @@ const Index = () => {
         {/* Tax Calculator */}
         <TaxCalculator totalDeductions={total} zakatAmount={zakatAmount} />
 
-        {/* Charts */}
-        <DashboardCharts totalByCategory={totalByCategory} deductions={deductions} />
 
         <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2 space-y-4">
