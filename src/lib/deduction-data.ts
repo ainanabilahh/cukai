@@ -84,6 +84,35 @@ export const CATEGORY_LIMITS: Record<DeductionCategory, number> = {
   "Zakat": Infinity,
 };
 
+export const CATEGORY_NOTES: Record<DeductionCategory, string> = {
+  "Individual & Dependants": "Automatic relief for every individual taxpayer.",
+  "Parents Medical": "Medical treatment, special needs & carer expenses for parents. Requires medical practitioner certification.",
+  "Basic Supporting Equipment": "Supporting equipment for disabled individual, spouse, child or parent (e.g. wheelchair, hearing aids, prosthetics).",
+  "Disabled Individual": "Additional relief if you are a registered disabled person (OKU card holder).",
+  "Education Fees (Self)": "Course fees for Masters/Doctorate, or upskilling courses in recognized institutions (law, accounting, technical, vocational, etc.).",
+  "Medical Expenses": "Serious diseases, fertility treatment, vaccination (up to RM1,000), dental (up to RM1,500), mental health examination & consultation.",
+  "Learning Disability": "Assessment & early intervention/rehabilitation for learning disabilities (e.g. autism, ADHD, dyslexia) for children aged 18 and below.",
+  "Lifestyle": "Books, magazines & journals; computer/tablet/smartphone; sports equipment & gym membership; internet subscription; EV charging costs (personal use).",
+  "Additional Lifestyle": "Sports equipment, rental/entry fees for sports facilities, registration for sports competitions.",
+  "Breastfeeding Equipment": "Purchase of breastfeeding equipment (pump, ice pack, storage bags, etc.). Claimable every 2 years, for mothers with child under 2.",
+  "Childcare Fees": "Fees paid to registered childcare centre or kindergarten for children aged 6 and below.",
+  "SSPN": "Net savings in Skim Simpanan Pendidikan Nasional (National Education Savings Scheme) for child's education.",
+  "Spouse / Alimony": "Relief for spouse with no income, or alimony payments to former wife.",
+  "Disabled Spouse": "Additional relief if spouse is a registered disabled person (OKU card holder).",
+  "Child (Under 18)": "RM2,000 per unmarried child under 18 years old.",
+  "Child (18+ Studying)": "RM8,000 per unmarried child 18+ receiving full-time education (diploma/degree level and above in Malaysia or equivalent overseas).",
+  "Child (Disabled)": "RM6,000 per disabled child. Additional RM8,000 if pursuing higher education.",
+  "Life Insurance & EPF": "Life insurance premiums & EPF/KWSP statutory contributions (combined limit).",
+  "EPF (Voluntary/Approved)": "Voluntary EPF contributions or contributions to approved schemes (PRS, etc.).",
+  "Private Retirement Scheme": "Contributions to Private Retirement Scheme (PRS) or deferred annuity.",
+  "Education & Medical Insurance": "Premiums for education insurance or medical/health insurance (including critical illness).",
+  "SOCSO / EIS": "SOCSO (PERKESO) and Employment Insurance System (SIP/EIS) contributions.",
+  "EV Charging / Green Tech": "Purchase, installation, rental or hire-purchase of EV charging equipment. Also includes green technology assets.",
+  "Housing Loan Interest": "Interest on housing loan for first residential property (conditions apply based on SPA date & property value).",
+  "Donations": "Approved donations & gifts of money to the Government, approved institutions, sports activities, or approved projects.",
+  "Zakat": "Zakat fitrah and zakat on income paid to approved Islamic authorities. Rebate (deducted from tax, not income).",
+};
+
 export const CATEGORY_GROUPS: Record<string, DeductionCategory[]> = {
   "Personal Relief": [
     "Individual & Dependants",
