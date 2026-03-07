@@ -1,16 +1,42 @@
+import { useState } from "react";
 import { Receipt, TrendingUp, Layers } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeductions } from "@/hooks/useDeductions";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
 import { DeductionList } from "@/components/DeductionList";
+import { DeductionFilters } from "@/components/DeductionFilters";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
 
+const currentYear = new Date().getFullYear();
+const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
+
 const Index = () => {
-  const { deductions, addDeduction, deleteDeduction, total, totalByCategory, categoryData } = useDeductions();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const {
+    filteredDeductions,
+    addDeduction,
+    deleteDeduction,
+    total,
+    totalByCategory,
+    categoryData,
+    searchQuery,
+    setSearchQuery,
+    filterCategory,
+    setFilterCategory,
+    switchYear,
+    deductions,
+  } = useDeductions(selectedYear);
 
   const categoryCount = Object.keys(totalByCategory).length;
+
+  const handleYearChange = (year: string) => {
+    const y = parseInt(year);
+    setSelectedYear(y);
+    switchYear(y);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,7 +48,19 @@ const Index = () => {
             </div>
             <div>
               <h1 className="font-display text-xl font-bold tracking-tight">Income Tax</h1>
-              <p className="text-xs text-muted-foreground">Year of Assessment 2025</p>
+              <div className="flex items-center gap-2">
+                <p className="text-xs text-muted-foreground">Year of Assessment</p>
+                <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                  <SelectTrigger className="h-6 w-[80px] text-xs border-none bg-transparent px-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEARS.map((y) => (
+                      <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -78,8 +116,14 @@ const Index = () => {
               <CardHeader>
                 <CardTitle className="font-display">Deduction List</CardTitle>
               </CardHeader>
-              <CardContent>
-                <DeductionList deductions={deductions} onDelete={deleteDeduction} />
+              <CardContent className="space-y-4">
+                <DeductionFilters
+                  searchQuery={searchQuery}
+                  onSearchChange={setSearchQuery}
+                  filterCategory={filterCategory}
+                  onFilterChange={setFilterCategory}
+                />
+                <DeductionList deductions={filteredDeductions} onDelete={deleteDeduction} />
               </CardContent>
             </Card>
           </div>
