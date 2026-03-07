@@ -129,4 +129,5 @@ export interface Deduction {
   amount: number;
   date: string;
   description: string;
+  receiptImage?: string; // base64 data URL
 }
