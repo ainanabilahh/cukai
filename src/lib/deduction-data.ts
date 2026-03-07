@@ -123,11 +123,20 @@ export const CATEGORY_GROUPS: Record<string, DeductionCategory[]> = {
   ],
 };
 
+export type DeductionFrequency = "yearly" | "monthly";
+
+export const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
+
 export interface Deduction {
   id: string;
   category: DeductionCategory;
   amount: number;
   date: string;
   description: string;
-  receiptImage?: string; // base64 data URL
+  receiptImage?: string;
+  frequency: DeductionFrequency;
+  month?: string; // only for monthly
 }
