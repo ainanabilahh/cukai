@@ -12,6 +12,7 @@ import { DeductionFilters } from "@/components/DeductionFilters";
 import { CategoryBreakdown } from "@/components/CategoryBreakdown";
 import { EAFormSection } from "@/components/EAFormSection";
 import { DashboardCharts } from "@/components/DashboardCharts";
+import { TaxCalculator } from "@/components/TaxCalculator";
 import { DataImportExport } from "@/components/DataImportExport";
 import { PrintSummary } from "@/components/PrintSummary";
 
@@ -39,6 +40,7 @@ const Index = () => {
   } = useDeductions(selectedYear);
 
   const categoryCount = Object.keys(totalByCategory).length;
+  const zakatAmount = totalByCategory["Zakat"] || 0;
 
   const handleYearChange = (year: string) => {
     const y = parseInt(year);
@@ -133,6 +135,9 @@ const Index = () => {
 
         {/* EA Forms Section */}
         <EAFormSection />
+
+        {/* Tax Calculator */}
+        <TaxCalculator totalDeductions={total} zakatAmount={zakatAmount} />
 
         {/* Charts */}
         <DashboardCharts totalByCategory={totalByCategory} deductions={deductions} />
