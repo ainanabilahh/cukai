@@ -1,4 +1,5 @@
 import { Receipt, TrendingUp, Layers } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useDeductions } from "@/hooks/useDeductions";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
@@ -24,7 +25,10 @@ const Index = () => {
               <p className="text-xs text-muted-foreground">Year of Assessment 2025</p>
             </div>
           </div>
-          <AddDeductionDialog onAdd={addDeduction} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <AddDeductionDialog onAdd={addDeduction} />
+          </div>
         </div>
       </header>
 
