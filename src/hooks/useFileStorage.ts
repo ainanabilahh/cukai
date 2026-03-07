@@ -98,7 +98,7 @@ export function useFileStorage() {
         : ["jpg", "jpeg"].includes(ext) ? "image/jpeg"
         : ext === "png" ? "image/png"
         : "application/octet-stream";
-      return URL.createObjectURL(new Blob([bytes], { type: mime }));
+      return URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: mime }));
     } catch {
       return null;
     }
