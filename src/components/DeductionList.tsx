@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
-import { Trash2, ImageIcon, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Trash2, ImageIcon, Eye, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -86,10 +86,17 @@ export function DeductionList({ deductions, onDelete }: Props) {
               className="rounded-lg border bg-card transition-colors overflow-hidden"
             >
               {/* Clickable row */}
-              <button
-                type="button"
-                className="flex items-center justify-between w-full p-4 text-left transition-colors hover:bg-secondary/50"
+              <div
+                role="button"
+                tabIndex={0}
+                className="flex items-center justify-between w-full p-4 text-left transition-colors hover:bg-secondary/50 cursor-pointer"
                 onClick={() => toggleExpand(d.id)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    toggleExpand(d.id);
+                  }
+                }}
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -97,10 +104,18 @@ export function DeductionList({ deductions, onDelete }: Props) {
                     <Badge variant="outline" className="text-xs">{d.frequency === "monthly" ? d.month : "Yearly"}</Badge>
                     <span className="text-xs text-muted-foreground">{d.date}</span>
                     {d.receiptImage && (
-                      <Badge variant="outline" className="text-xs gap-1">
-                        <ImageIcon className="h-3 w-3" />
-                        Receipt
-                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-primary hover:text-primary/80"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleViewReceipt(d);
+                        }}
+                        title="View receipt"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                      </Button>
                     )}
                   </div>
                   <p className="text-sm truncate">{d.description}</p>
@@ -115,7 +130,7 @@ export function DeductionList({ deductions, onDelete }: Props) {
                     <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
                   )}
                 </div>
-              </button>
+              </div>
 
               {/* Expanded details */}
               {isExpanded && (
