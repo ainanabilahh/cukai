@@ -12,8 +12,8 @@ export function DeductionList({ deductions, onDelete }: Props) {
   if (deductions.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-        <p className="text-lg">Tiada potongan lagi</p>
-        <p className="text-sm">Tekan "Tambah Potongan" untuk mula</p>
+        <p className="text-lg">No deductions yet</p>
+        <p className="text-sm">Click "Add Deduction" to get started</p>
       </div>
     );
   }
@@ -31,7 +31,7 @@ export function DeductionList({ deductions, onDelete }: Props) {
           </div>
           <div className="flex items-center gap-3 ml-4">
             <span className="font-display font-semibold text-primary whitespace-nowrap">
-              RM {d.amount.toLocaleString("ms-MY", { minimumFractionDigits: 2 })}
+              RM {d.amount.toLocaleString("en-MY", { minimumFractionDigits: 2 })}
             </span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => onDelete(d.id)}>
               <Trash2 className="h-4 w-4" />
