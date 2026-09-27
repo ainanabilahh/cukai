@@ -1,6 +1,8 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
+import { Deduction } from "@/lib/deduction-data";
+import { limitFor } from "@/lib/tax-rates";
+import { useTaxRates } from "@/contexts/TaxRatesContext";
 
 interface Props {
   deductions: Deduction[];
@@ -10,6 +12,7 @@ interface Props {
 }
 
 export function PrintSummary({ deductions, totalByCategory, total, year }: Props) {
+  const { limits } = useTaxRates(year);
   const handlePrint = () => {
     const entries = Object.entries(totalByCategory).sort((a, b) => b[1] - a[1]);
     const fmt = (n: number) => `RM ${n.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`;
@@ -44,7 +47,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
           <thead><tr><th>Category</th><th class="amount">Claimed</th><th class="amount">Limit</th><th class="amount">Status</th></tr></thead>
           <tbody>
             ${entries.map(([cat, amount]) => {
-              const limit = CATEGORY_LIMITS[cat as DeductionCategory];
+              const limit = limitFor(limits, cat);
               const isOver = limit !== Infinity && amount > limit;
               return `<tr>
                 <td>${cat}</td>

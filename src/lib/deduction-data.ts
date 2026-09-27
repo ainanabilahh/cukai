@@ -79,7 +79,7 @@ export const CATEGORY_LIMITS: Record<DeductionCategory, number> = {
   "Education & Medical Insurance": 4000,
   "SOCSO / EIS": 350,
   "EV Charging / Green Tech": 2500,
-  "Housing Loan Interest": Infinity,
+  "Housing Loan Interest": 7000, // first home, SPA 2025-2027; RM5,000 if price is RM500k-750k
   "Donations": Infinity,
   "Zakat": Infinity,
 };

@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Deduction, CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
+import { Deduction } from "@/lib/deduction-data";
+import { limitFor } from "@/lib/tax-rates";
+import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { Trash2, Eye, Paperclip, ZoomIn, ZoomOut, RotateCw, Download, ChevronDown, ChevronUp, FileText, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,6 +20,7 @@ interface Props {
 
 export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: Props) {
   const fileStorage = useFileStorageContext();
+  const { limits } = useTaxRates(year);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [viewingReceipt, setViewingReceipt] = useState<{ urls: { url: string; type: string }[]; currentIndex: number; deduction: Deduction } | null>(null);
   const [zoom, setZoom] = useState(1);
@@ -160,7 +163,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
       <div className="space-y-2">
         {deductions.map((d) => {
           const isExpanded = expandedId === d.id;
-          const limit = CATEGORY_LIMITS[d.category as DeductionCategory];
+          const limit = limitFor(limits, d.category);
           const hasLimit = limit !== Infinity;
           const receiptCount = d.receiptImages?.length || 0;
 

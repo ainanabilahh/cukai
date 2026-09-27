@@ -5,7 +5,7 @@ export interface TaxBracket {
   min: number;
   max: number;
   rate: number; // percentage
-  cumulativeTax: number; // tax on all brackets before this one
+  cumulativeTax?: number; // tax on all brackets before this one
 }
 
 export const TAX_BRACKETS: TaxBracket[] = [
@@ -44,7 +44,7 @@ export function calculateTax(
   totalReliefs: number,
   zakat: number,
   pcbPaid: number,
-  chargeableIncomeBelow35k: boolean = false, // for self rebate eligibility
+  brackets: TaxBracket[] = TAX_BRACKETS,
 ): TaxCalculationResult {
   const chargeableIncome = Math.max(0, totalIncome - totalReliefs);
 
@@ -52,13 +52,12 @@ export function calculateTax(
   let taxBeforeRebate = 0;
   const bracketBreakdown: TaxCalculationResult["bracketBreakdown"]= [];
 
-  for (const bracket of TAX_BRACKETS) {
-    if (chargeableIncome < bracket.min) break;
+  for (const [i, bracket] of brackets.entries()) {
+    // Each band starts where the previous one ended, so "5,001 - 20,000" and "5,000 - 20,000" both work
+    const lower = i === 0 ? bracket.min : brackets[i - 1].max;
+    if (chargeableIncome <= lower) break;
 
-    const taxableInBracket = Math.min(
-      chargeableIncome - bracket.min + 1,
-      bracket.max - bracket.min + 1
-    );
+    const taxableInBracket = Math.min(chargeableIncome, bracket.max) - lower;
 
     if (taxableInBracket > 0) {
       const tax = (taxableInBracket * bracket.rate) / 100;

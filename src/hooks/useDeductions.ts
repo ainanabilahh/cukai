@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from "react";
-import { Deduction, DeductionCategory, CATEGORY_LIMITS } from "@/lib/deduction-data";
+import { Deduction, DeductionCategory } from "@/lib/deduction-data";
 import { getDb } from "@/lib/db";
 
 type Row = {
@@ -163,7 +163,6 @@ export function useDeductions(year: number) {
   const categoryData = Object.entries(totalByCategory).map(([name, value]) => ({
     name,
     value,
-    limit: CATEGORY_LIMITS[name as DeductionCategory],
   }));
 
   return {

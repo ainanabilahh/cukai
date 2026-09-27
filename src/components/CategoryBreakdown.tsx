@@ -1,11 +1,12 @@
-import { CATEGORY_LIMITS, DeductionCategory } from "@/lib/deduction-data";
+import { limitFor } from "@/lib/tax-rates";
 import { Progress } from "@/components/ui/progress";
 
 interface Props {
   totalByCategory: Record<string, number>;
+  limits: Record<string, number>;
 }
 
-export function CategoryBreakdown({ totalByCategory }: Props) {
+export function CategoryBreakdown({ totalByCategory, limits }: Props) {
   const entries = Object.entries(totalByCategory).sort((a, b) => b[1] - a[1]);
 
   if (entries.length === 0) return null;
@@ -13,7 +14,7 @@ export function CategoryBreakdown({ totalByCategory }: Props) {
   return (
     <div className="space-y-4">
       {entries.map(([cat, amount]) => {
-        const limit = CATEGORY_LIMITS[cat as DeductionCategory];
+        const limit = limitFor(limits, cat);
         const pct = limit === Infinity ? 0 : Math.min((amount / limit) * 100, 100);
         const isOver = limit !== Infinity && amount > limit;
 

@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Receipt, TrendingUp, Layers, BarChart3 } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ import { TaxCalculator } from "@/components/TaxCalculator";
 import { BEFormSection } from "@/components/BEFormSection";
 import { DataImportExport } from "@/components/DataImportExport";
 import { PrintSummary } from "@/components/PrintSummary";
+import { useTaxRates } from "@/contexts/TaxRatesContext";
+import { capReliefs } from "@/lib/tax-rates";
 
 const currentYear = new Date().getFullYear();
 const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
@@ -44,6 +46,8 @@ const Index = () => {
 
   const categoryCount = Object.keys(totalByCategory).length;
   const zakatAmount = totalByCategory["Zakat"] || 0;
+  const rates = useTaxRates(selectedYear);
+  const reliefs = useMemo(() => capReliefs(totalByCategory, rates.limits, rates.shared), [totalByCategory, rates.limits, rates.shared]);
 
   const handleYearChange = (year: string) => {
     const y = parseInt(year);
@@ -53,28 +57,21 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b bg-card sticky top-0 z-50">
-        <div className="container mx-auto flex items-center justify-between px-4 py-5">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <Receipt className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <div>
-              <h1 className="font-display text-xl font-bold tracking-tight">Income Tax</h1>
-              <div className="flex items-center gap-2">
-                <p className="text-xs text-muted-foreground">Year of Assessment</p>
-                <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
-                  <SelectTrigger className="h-6 w-[80px] text-xs border-none bg-transparent px-1">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {YEARS.map((y) => (
-                      <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+      <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
+        <div className="container mx-auto flex items-center justify-between px-4 py-3">
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-lg font-semibold tracking-tight">Cukai</h1>
+            <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="h-7 w-auto gap-1 text-sm text-muted-foreground border-none bg-transparent px-1 shadow-none focus:ring-0">
+                <span>YA</span>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {YEARS.map((y) => (
+                  <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex items-center gap-2">
             <StorageSettings />
@@ -97,41 +94,20 @@ const Index = () => {
           </div>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-primary/10">
-                <TrendingUp className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Claims</p>
-                <p className="font-display text-2xl font-bold">RM {total.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-accent/20">
-                <Receipt className="h-6 w-6 text-accent-foreground" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Total Receipts</p>
-                <p className="font-display text-2xl font-bold">{deductions.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center gap-4 p-5">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-secondary">
-                <Layers className="h-6 w-6 text-secondary-foreground" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Categories</p>
-                <p className="font-display text-2xl font-bold">{categoryCount}</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <dl className="grid grid-cols-3 divide-x rounded-lg border bg-card">
+          <div className="px-5 py-4">
+            <dt className="text-xs text-muted-foreground">Total claimed</dt>
+            <dd className="mt-1 text-xl font-semibold">RM {total.toLocaleString("en-MY", { minimumFractionDigits: 2 })}</dd>
+          </div>
+          <div className="px-5 py-4">
+            <dt className="text-xs text-muted-foreground">Receipts</dt>
+            <dd className="mt-1 text-xl font-semibold">{deductions.length}</dd>
+          </div>
+          <div className="px-5 py-4">
+            <dt className="text-xs text-muted-foreground">Categories</dt>
+            <dd className="mt-1 text-xl font-semibold">{categoryCount}</dd>
+          </div>
+        </dl>
 
 
         {/* Forms */}
@@ -141,7 +117,7 @@ const Index = () => {
         </div>
 
         {/* Tax Calculator */}
-        <TaxCalculator totalDeductions={total} zakatAmount={zakatAmount} />
+        <TaxCalculator totalReliefs={reliefs.total} overLimit={reliefs.excess} zakatAmount={zakatAmount} rates={rates} />
 
 
         <div className="grid gap-6 lg:grid-cols-3">
@@ -176,7 +152,7 @@ const Index = () => {
                 <CardTitle className="font-display">Category Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <CategoryBreakdown totalByCategory={totalByCategory} />
+                <CategoryBreakdown totalByCategory={totalByCategory} limits={rates.limits} />
                 {categoryData.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">No data yet</p>
                 )}

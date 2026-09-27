@@ -1,19 +1,22 @@
 import { useState, useMemo } from "react";
-import { Calculator, ChevronDown, ChevronUp, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { calculateTax, formatRM, TAX_BRACKETS } from "@/lib/tax-calculator";
+import { calculateTax, formatRM } from "@/lib/tax-calculator";
+import { ResolvedRates } from "@/lib/tax-rates";
 
 interface TaxCalculatorProps {
-  totalDeductions: number;
+  totalReliefs: number; // already capped at category and shared limits, excluding zakat
+  overLimit: number; // amount claimed above category limits (not counted)
   zakatAmount: number;
+  rates: ResolvedRates;
 }
 
-export function TaxCalculator({ totalDeductions, zakatAmount }: TaxCalculatorProps) {
+export function TaxCalculator({ totalReliefs, overLimit, zakatAmount, rates }: TaxCalculatorProps) {
   const [totalIncome, setTotalIncome] = useState<string>("");
   const [pcbPaid, setPcbPaid] = useState<string>("");
   const [showBrackets, setShowBrackets] = useState(false);
@@ -22,8 +25,8 @@ export function TaxCalculator({ totalDeductions, zakatAmount }: TaxCalculatorPro
   const pcb = parseFloat(pcbPaid) || 0;
 
   const result = useMemo(
-    () => calculateTax(income, totalDeductions, zakatAmount, pcb),
-    [income, totalDeductions, zakatAmount, pcb]
+    () => calculateTax(income, totalReliefs, zakatAmount, pcb, rates.brackets),
+    [income, totalReliefs, zakatAmount, pcb, rates.brackets]
   );
 
   const hasInput = income > 0;
@@ -31,10 +34,11 @@ export function TaxCalculator({ totalDeductions, zakatAmount }: TaxCalculatorPro
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-primary" />
-          Tax Calculator
-          <Badge variant="secondary" className="text-xs font-normal">YA 2025</Badge>
+        <CardTitle className="flex items-center gap-2">
+          Tax estimate
+          <Badge variant="secondary" className="text-xs font-normal" title={rates.source === "sheet" ? "Rates from your Google Sheet" : "Built-in rates"}>
+            YA {rates.year} rates{rates.source === "sheet" ? " · sheet" : ""}
+          </Badge>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
@@ -73,7 +77,12 @@ export function TaxCalculator({ totalDeductions, zakatAmount }: TaxCalculatorPro
             {/* Computation Summary */}
             <div className="space-y-3">
               <SummaryRow label="Total Income" value={result.totalIncome} />
-              <SummaryRow label="Total Reliefs (from deductions)" value={-result.totalReliefs} className="text-muted-foreground" />
+              <SummaryRow label="Total Reliefs (capped at limits)" value={-result.totalReliefs} className="text-muted-foreground" />
+              {overLimit > 0 && (
+                <p className="text-xs text-muted-foreground -mt-2">
+                  RM {formatRM(overLimit)} claimed above LHDN limits isn't counted.
+                </p>
+              )}
               <Separator />
               <SummaryRow label="Chargeable Income" value={result.chargeableIncome} bold />
 
