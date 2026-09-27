@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Upload, FileText, Trash2, Eye, ClipboardList } from "lucide-react";
+import { Upload, FileText, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -96,8 +96,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
     <>
       <Card>
         <CardHeader>
-          <CardTitle className="font-display flex items-center gap-2">
-            <ClipboardList className="h-5 w-5" />
+          <CardTitle>
             BE Form
           </CardTitle>
         </CardHeader>
