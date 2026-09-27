@@ -10,7 +10,7 @@ import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { useTaxRatesContext } from "@/contexts/TaxRatesContext";
 
 export function StorageSettings() {
-  const { isSupported, isReady, directoryName, hasCustomFolder, pickDirectory, clearDirectory } = useFileStorageContext();
+  const { isSupported, isReady, directoryName, hasCustomFolder, folderAccessible, pickDirectory, clearDirectory } = useFileStorageContext();
 
   const handlePick = async () => {
     const ok = await pickDirectory();
@@ -49,6 +49,11 @@ export function StorageSettings() {
                   </span>
                 </div>
               </div>
+              {!folderAccessible && (
+                <p className="text-xs text-destructive">
+                  Cukai can't reach this folder since the last update. Click Change Folder and choose it again.
+                </p>
+              )}
               <p className="text-xs text-muted-foreground">
                 Receipts and uploaded forms are saved to this folder. Changing the folder does not move existing files.
               </p>

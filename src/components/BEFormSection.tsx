@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBEForms, BEForm } from "@/hooks/useBEForms";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
-import { fileExtension } from "@/hooks/useFileStorage";
+import { fileExtension } from "@/lib/files";
 import { toast } from "sonner";
 
 interface BEFormSectionProps {

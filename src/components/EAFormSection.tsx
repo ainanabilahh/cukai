@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEAForms, EAForm } from "@/hooks/useEAForms";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
-import { fileExtension } from "@/hooks/useFileStorage";
+import { fileExtension } from "@/lib/files";
 import { toast } from "sonner";
 
 interface EAFormSectionProps {

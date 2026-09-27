@@ -1,13 +1,16 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { toast } from "sonner";
+import { isAppFilePath, isTauri, MIME_BY_EXTENSION } from "@/lib/files";
 
-const isTauri = () => "__TAURI_INTERNALS__" in window;
+// Re-exported for existing imports
+export { fileExtension, isAppFilePath } from "@/lib/files";
+
 
 // ── Tauri imports (loaded lazily to avoid errors in browser) ──────────────────
-async function tauriOpen() {
+async function tauriOpen(defaultPath?: string) {
   const { open } = await import("@tauri-apps/plugin-dialog");
   // recursive: the picked folder and everything under it becomes readable and writable
-  return open({ directory: true, multiple: false, recursive: true, title: "Choose Storage Folder" });
+  return open({ directory: true, multiple: false, recursive: true, defaultPath, title: "Choose Storage Folder" });
 }
 
 async function tauriReadFile(path: string, opts?: object): Promise<Uint8Array> {
@@ -136,24 +139,6 @@ async function verifyBrowserPermission(handle: FileSystemDirectoryHandle): Promi
   return false;
 }
 
-/** File extension for an uploaded receipt or form, from its real type. */
-export function fileExtension(file: File): string {
-  if (file.type === "application/pdf") return "pdf";
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "image/heic") return "heic";
-  return "jpg";
-}
-
-/**
- * Only files the app itself created may be deleted: <name>-<uuid>.<ext>, optionally under
- * folders, with no "..". Guards against paths that came from an imported file.
- */
-export function isAppFilePath(filePath: string): boolean {
-  if (filePath.includes("..") || filePath.startsWith("/") || filePath.includes("\\")) return false;
-  return /^([\w .-]+\/)*(receipt|ea-form|be-form)-[0-9a-f-]{36}\.(jpg|png|webp|heic|pdf)$/i.test(filePath);
-}
-
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useFileStorage() {
   const [customDir, setCustomDir] = useState<string | null>(null);
@@ -164,13 +149,19 @@ export function useFileStorage() {
   const customDirRef = useRef<string | null>(null);
   const browserHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
   const pastDirsRef = useRef<string[]>([]);
+  // Resolves once the saved folder settings have loaded
+  const loadedRef = useRef<Promise<void>>(Promise.resolve());
+  // False when the saved folder is no longer in the app's allowed file access (e.g. picked before an update)
+  const [folderAccessible, setFolderAccessible] = useState(true);
+  const folderAccessibleRef = useRef(true);
+  const applyAccessible = (ok: boolean) => { folderAccessibleRef.current = ok; setFolderAccessible(ok); };
 
   const applyCustomDir = (dir: string | null) => { customDirRef.current = dir; setCustomDir(dir); };
   const applyBrowserHandle = (h: FileSystemDirectoryHandle | null) => { browserHandleRef.current = h; setBrowserHandle(h); };
 
   useEffect(() => {
     if (isTauri()) {
-      Promise.all([loadSavedDir(), loadDirHistory()])
+      loadedRef.current = Promise.all([loadSavedDir(), loadDirHistory()])
         .then(async ([dir, history]) => {
           applyCustomDir(dir);
           pastDirsRef.current = history;
@@ -178,6 +169,10 @@ export function useFileStorage() {
           if (dir && !history.includes(dir)) {
             pastDirsRef.current = [...history, dir];
             await addDirToHistory(dir);
+          }
+          if (dir) {
+            // exists() is refused when the folder is outside the allowed scope
+            try { await tauriExists(dir); applyAccessible(true); } catch { applyAccessible(false); }
           }
         })
         .catch((err) => console.error("Couldn't read the saved storage folder:", err))
@@ -194,13 +189,14 @@ export function useFileStorage() {
   const pickDirectory = useCallback(async (): Promise<boolean> => {
     if (isTauri()) {
       try {
-        const selected = await tauriOpen();
+        const selected = await tauriOpen(customDirRef.current ?? undefined);
         if (!selected) return false;
         const dir = typeof selected === "string" ? selected : (selected as string[])[0];
         await saveDir(dir);
         await addDirToHistory(dir);
         if (!pastDirsRef.current.includes(dir)) pastDirsRef.current = [...pastDirsRef.current, dir];
         applyCustomDir(dir);
+        applyAccessible(true);
         setIsReady(true);
         return true;
       } catch (err) {
@@ -242,10 +238,14 @@ export function useFileStorage() {
     if (!isSupported) return false;
     try {
       if (isTauri()) {
-        if (isReady) return true;
-      } else if (browserHandleRef.current) {
-        if (await verifyBrowserPermission(browserHandleRef.current)) return true;
+        await loadedRef.current; // don't ask for a folder that's still loading
+        if (customDirRef.current && !folderAccessibleRef.current) {
+          toast.info("Please choose your storage folder again to give Cukai access to it.");
+          return await pickDirectory();
+        }
+        return true; // the app's own folder is always available
       }
+      if (browserHandleRef.current && (await verifyBrowserPermission(browserHandleRef.current))) return true;
       toast.info("Please choose a folder to save your files");
       return await pickDirectory();
     } catch (err) {
@@ -254,7 +254,7 @@ export function useFileStorage() {
       toast.error("Couldn't access your storage folder. Open Settings and choose it again.");
       return false;
     }
-  }, [isSupported, isReady, pickDirectory]);
+  }, [isSupported, pickDirectory]);
 
   /** Tauri: the places a stored file may live, newest first (current folder, earlier folders, app folder). */
   const tauriLocations = (filePath: string) => {
@@ -279,12 +279,10 @@ export function useFileStorage() {
     return { dir, fileName };
   };
 
-  const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
+  const saveFile = useCallback(async (filePath: string, data: Blob): Promise<boolean> => {
     let bytes: Uint8Array;
     try {
-      bytes = typeof data === "string"
-        ? new Uint8Array(await (await fetch(data)).arrayBuffer())
-        : new Uint8Array(await data.arrayBuffer());
+      bytes = new Uint8Array(await data.arrayBuffer());
     } catch (err) {
       console.error("Couldn't read the file to save:", err);
       return false;
@@ -327,12 +325,7 @@ export function useFileStorage() {
 
   const readFileAsUrl = useCallback(async (filePath: string): Promise<string | null> => {
     const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
-    const mime = ext === "pdf" ? "application/pdf"
-      : ["jpg", "jpeg"].includes(ext) ? "image/jpeg"
-      : ext === "png" ? "image/png"
-      : ext === "webp" ? "image/webp"
-      : ext === "heic" ? "image/heic"
-      : "application/octet-stream";
+    const mime = MIME_BY_EXTENSION[ext] ?? "application/octet-stream";
 
     if (isTauri()) {
       for (const loc of tauriLocations(filePath)) {
@@ -387,6 +380,7 @@ export function useFileStorage() {
     directoryName,
     customDir,
     hasCustomFolder,
+    folderAccessible,
     ensureReady,
     pickDirectory,
     changeDirectory: pickDirectory,

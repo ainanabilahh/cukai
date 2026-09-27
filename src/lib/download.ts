@@ -1,6 +1,8 @@
+import { isTauri } from "@/lib/files";
+
 /** Saves a blob as a file: a save dialog in the desktop app, a normal download in the browser. */
 export async function saveBlob(blob: Blob, filename: string): Promise<boolean> {
-  if ("__TAURI_INTERNALS__" in window) {
+  if (isTauri()) {
     // The desktop webview ignores <a download>, so ask where to save and write the file
     const { save } = await import("@tauri-apps/plugin-dialog");
     const { writeFile } = await import("@tauri-apps/plugin-fs");

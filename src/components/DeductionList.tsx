@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
-import { fileExtension } from "@/hooks/useFileStorage";
+import { dataUrlType, fileExtension } from "@/lib/files";
 import { ReceiptFolderDialog } from "@/components/ReceiptFolderDialog";
 import { toast } from "sonner";
 import { saveBlob } from "@/lib/download";
@@ -31,8 +31,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
 
   const resolveReceiptUrl = async (fileName: string): Promise<{ url: string; type: string; ext: string } | null> => {
     if (fileName.startsWith("data:")) {
-      const mime = fileName.slice(5, fileName.indexOf(";"));
-      const ext = mime === "application/pdf" ? "pdf" : (mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+      const ext = dataUrlType(fileName)?.ext ?? "jpg";
       return { url: fileName, type: ext === "pdf" ? "pdf" : "image", ext };
     }
     if (fileStorage.isReady) {
