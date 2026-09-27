@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart3 } from "lucide-react";
+import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
 import { Logo } from "@/components/Logo";
@@ -21,6 +22,7 @@ import { PrintSummary } from "@/components/PrintSummary";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { capReliefs } from "@/lib/tax-rates";
 import { getYearsWithData } from "@/lib/db";
+import { useFileStorageContext } from "@/contexts/FileStorageContext";
 
 const currentYear = new Date().getFullYear();
 // Always offer this year and last year (the one usually being filed), plus any year with data
@@ -45,6 +47,14 @@ const Index = () => {
     filterCategory,
     setFilterCategory,
   } = useDeductions(selectedYear);
+
+  const fileStorage = useFileStorageContext();
+  const handleDelete = async (id: string) => {
+    const receipts = deductions.find((d) => d.id === id)?.receiptImages ?? [];
+    await deleteDeduction(id);
+    // Remove the claim's receipt files too (inline data URLs live in the row itself)
+    await Promise.all(receipts.filter((r) => !r.startsWith("data:")).map((r) => fileStorage.deleteFile(r)));
+  };
 
   const [dataYears, setDataYears] = useState<number[]>([]);
   useEffect(() => {
@@ -145,7 +155,7 @@ const Index = () => {
                 />
                 <DeductionList
                   deductions={filteredDeductions}
-                  onDelete={deleteDeduction}
+                  onDelete={(id) => { handleDelete(id).catch(() => toast.error("Couldn't delete the claim.")); }}
                   year={selectedYear}
                   onAttachReceipt={(id, fileName) => {
                     const existing = deductions.find(d => d.id === id);
