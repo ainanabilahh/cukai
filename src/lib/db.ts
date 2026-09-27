@@ -68,3 +68,12 @@ export async function setSetting(key: string, value: string): Promise<void> {
     [key, value]
   );
 }
+
+/** Years of assessment that have claims or a BE form, newest first. */
+export async function getYearsWithData(): Promise<number[]> {
+  const db = await getDb();
+  const rows = await db.select<{ year: number }[]>(
+    "SELECT year FROM deductions UNION SELECT year FROM be_forms ORDER BY year DESC"
+  );
+  return rows.map((r) => Number(r.year));
+}

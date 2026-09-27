@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -19,9 +19,11 @@ import { DataImportExport } from "@/components/DataImportExport";
 import { PrintSummary } from "@/components/PrintSummary";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { capReliefs } from "@/lib/tax-rates";
+import { getYearsWithData } from "@/lib/db";
 
 const currentYear = new Date().getFullYear();
-const YEARS = Array.from({ length: 5 }, (_, i) => currentYear + 1 - i);
+// Always offer this year and last year (the one usually being filed), plus any year with data
+const BASE_YEARS = [currentYear, currentYear - 1];
 
 const Index = () => {
   const navigate = useNavigate();
@@ -43,6 +45,15 @@ const Index = () => {
     setFilterCategory,
     switchYear,
   } = useDeductions(selectedYear);
+
+  const [dataYears, setDataYears] = useState<number[]>([]);
+  useEffect(() => {
+    getYearsWithData().then(setDataYears).catch(() => setDataYears([]));
+  }, [deductions.length]);
+  const years = useMemo(
+    () => [...new Set([...BASE_YEARS, ...dataYears, selectedYear])].sort((a, b) => b - a),
+    [dataYears, selectedYear],
+  );
 
   const categoryCount = Object.keys(totalByCategory).length;
   const zakatAmount = totalByCategory["Zakat"] || 0;
@@ -67,7 +78,7 @@ const Index = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {YEARS.map((y) => (
+                {years.map((y) => (
                   <SelectItem key={y} value={y.toString()}>{y}</SelectItem>
                 ))}
               </SelectContent>
