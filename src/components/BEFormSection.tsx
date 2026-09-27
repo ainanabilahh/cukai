@@ -102,7 +102,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
       <Card>
         <CardHeader>
           <CardTitle>
-            BE Form
+            BE Forms
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
