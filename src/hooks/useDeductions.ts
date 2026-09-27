@@ -131,7 +131,7 @@ export function useDeductions(year: number) {
   const updateDeduction = useCallback(async (id: string, updates: Partial<Deduction>) => {
     const db = await getDb();
     const existing = deductions.find((d) => d.id === id);
-    if (!existing) return;
+    if (!existing) throw new Error("That claim is no longer in the list");
     const merged = { ...existing, ...updates };
     await db.execute(
       `UPDATE deductions SET category=?, amount=?, date=?, description=?, frequency=?, month=?, receipt_images=?

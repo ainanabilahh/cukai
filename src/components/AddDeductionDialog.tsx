@@ -121,8 +121,12 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
           }
           savedFileNames.push(fileName);
         }
+      } else if (fileStorage.isSupported) {
+        // A folder is supported but wasn't chosen: don't bloat the database with the files
+        toast.error("Choose a storage folder to save receipts.");
+        return;
       } else {
-        // Fallback: convert files to base64 data URLs
+        // No folder support at all (older browsers): keep receipts inline as data URLs
         for (const receipt of receiptFiles) {
           const dataUrl = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -156,7 +160,8 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
     setAmount("");
     setDescription("");
     clearAllReceipts();
-    setMonth(MONTHS[new Date().getMonth()]);
+    // Start the next claim from a date and month that agree, inside the selected year
+    handleDateChange(year === new Date().getFullYear() ? new Date() : new Date(year, 11, 31));
     setShowDupeWarning(false);
     setOpen(false);
   };

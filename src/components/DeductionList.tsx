@@ -113,8 +113,12 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
       setPendingReceipt({ deduction, file });
       return;
     }
+    if (fileStorage.isSupported) {
+      toast.error("Choose a storage folder to save receipts.");
+      return;
+    }
 
-    // Fallback: store as base64 data URL when file system not available
+    // Fallback: store as base64 data URL when there is no folder support at all
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;

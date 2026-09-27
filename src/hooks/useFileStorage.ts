@@ -269,13 +269,14 @@ export function useFileStorage() {
   const withBase = async (opts: object | undefined | "appdata") =>
     opts === "appdata" ? { baseDir: await getBaseDir() } : opts;
 
-  const browserFile = async (filePath: string) => {
+  /** Browser: the folder holding filePath (created when asked) and the file's name. */
+  const browserFile = async (filePath: string, create = false) => {
     const handle = browserHandleRef.current;
     if (!handle || !(await verifyBrowserPermission(handle))) return null;
     const parts = filePath.split("/");
     const fileName = parts.pop()!;
     let dir: FileSystemDirectoryHandle = handle;
-    for (const part of parts) dir = await dir.getDirectoryHandle(part);
+    for (const part of parts) dir = await dir.getDirectoryHandle(part, { create });
     return { dir, fileName };
   };
 
@@ -306,15 +307,10 @@ export function useFileStorage() {
         return true;
       } catch (err) { console.error("saveFile error:", err); return false; }
     } else {
-      const handle = browserHandleRef.current;
-      if (!handle) return false;
       try {
-        if (!(await verifyBrowserPermission(handle))) return false;
-        const parts = filePath.split("/");
-        const fileName = parts.pop()!;
-        let dir: FileSystemDirectoryHandle = handle;
-        for (const part of parts) dir = await dir.getDirectoryHandle(part, { create: true });
-        const fh = await dir.getFileHandle(fileName, { create: true });
+        const found = await browserFile(filePath, true);
+        if (!found) return false;
+        const fh = await found.dir.getFileHandle(found.fileName, { create: true });
         const writable = await fh.createWritable();
         await writable.write(new Blob([bytes.buffer as ArrayBuffer]));
         await writable.close();
