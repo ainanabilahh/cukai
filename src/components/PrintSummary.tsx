@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Deduction } from "@/lib/deduction-data";
 import { limitFor } from "@/lib/tax-rates";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
+import { escapeHtml } from "@/lib/utils";
 
 interface Props {
   deductions: Deduction[];
@@ -50,7 +51,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
               const limit = limitFor(limits, cat);
               const isOver = limit !== Infinity && amount > limit;
               return `<tr>
-                <td>${cat}</td>
+                <td>${escapeHtml(cat)}</td>
                 <td class="amount ${isOver ? 'over-limit' : ''}">${fmt(amount)}</td>
                 <td class="amount">${limit === Infinity ? 'No limit' : fmt(limit)}</td>
                 <td class="amount ${isOver ? 'over-limit' : ''}">${isOver ? '⚠ Over limit' : '✓'}</td>
@@ -68,9 +69,9 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
           <thead><tr><th>Date</th><th>Category</th><th>Description</th><th class="amount">Amount</th></tr></thead>
           <tbody>
             ${deductions.map((d) => `<tr>
-              <td>${d.date}</td>
-              <td>${d.category}</td>
-              <td>${d.description}</td>
+              <td>${escapeHtml(d.date)}</td>
+              <td>${escapeHtml(d.category)}</td>
+              <td>${escapeHtml(d.description)}</td>
               <td class="amount">${fmt(d.amount)}</td>
             </tr>`).join("")}
           </tbody>
@@ -85,6 +86,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
 
     const w = window.open("", "_blank");
     if (w) {
+      w.opener = null; // the print window gets no handle back into the app
       w.document.write(html);
       w.document.close();
       w.print();
