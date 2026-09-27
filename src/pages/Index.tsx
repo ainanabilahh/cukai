@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { BarChart3 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { StorageSettings } from "@/components/StorageSettings";
+import { Logo } from "@/components/Logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -70,8 +71,8 @@ const Index = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-background/95 backdrop-blur sticky top-0 z-50">
         <div className="container mx-auto flex items-center justify-between px-4 py-3">
-          <div className="flex items-baseline gap-3">
-            <h1 className="text-lg font-semibold tracking-tight">Cukai</h1>
+          <div className="flex items-center gap-3">
+            <h1><Logo /></h1>
             <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
               <SelectTrigger className="h-7 w-auto gap-1 text-sm text-muted-foreground border-none bg-transparent px-1 shadow-none focus:ring-0">
                 <span>YA</span>

@@ -21,7 +21,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Tax Claim Summary - YA ${year}</title>
+        <title>Cukai. Tax Claim Summary - YA ${year}</title>
         <style>
           body { font-family: 'Segoe UI', sans-serif; padding: 40px; color: #1a1a2e; max-width: 800px; margin: 0 auto; }
           h1 { font-size: 24px; margin-bottom: 4px; }
@@ -39,7 +39,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
         </style>
       </head>
       <body>
-        <h1>Income Tax Claim Summary</h1>
+        <h1>Cukai<span style="color:#d9892f">.</span> Tax Claim Summary</h1>
         <p class="subtitle">Year of Assessment ${year} &bull; Generated ${new Date().toLocaleDateString("en-MY")}</p>
 
         <h2 class="section-title">Category Summary</h2>
