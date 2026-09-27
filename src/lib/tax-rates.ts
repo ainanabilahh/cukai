@@ -70,7 +70,8 @@ function toNumber(value: string | undefined): number | null {
  *   year | type | category | limit | from | to | rate
  * type "relief":  category + limit (blank limit = no limit)
  * type "bracket": from + to (blank to = no upper bound) + rate (percent)
- * type "shared":  category lists categories joined with " + ", limit is their combined cap
+ * type "shared":  category lists categories joined with " + ", limit is their combined cap;
+ *                  category "none" means the year has no shared limits at all
  */
 export function parseRatesSheet(csv: string): Map<number, Partial<YearRates>> {
   const rows = parseCsv(csv);
@@ -105,6 +106,9 @@ export function parseRatesSheet(csv: string): Map<number, Partial<YearRates>> {
       const to = toNumber(r[idx.to]);
       const entry = get(year);
       entry.brackets = [...(entry.brackets ?? []), { min: from, max: to ?? Infinity, rate }];
+    } else if (type === "shared" && r[idx.category]?.trim().toLowerCase() === "none") {
+      const entry = get(year);
+      entry.shared = entry.shared ?? [];
     } else if (type === "shared") {
       const categories = (r[idx.category] ?? "").split("+").map((c) => c.trim()).filter(Boolean);
       const limit = toNumber(r[idx.limit]);

@@ -54,6 +54,12 @@ export function TaxRatesProvider({ children }: { children: ReactNode }) {
     setLoading(true);
     setError(null);
     try {
+      // The desktop app may only contact Google Sheets (see the CSP in tauri.conf.json)
+      let host = "";
+      try { host = new URL(url).hostname; } catch { /* reported below */ }
+      if (host !== "docs.google.com") {
+        throw new Error("Use a Google Sheets link from File → Share → Publish to web → CSV.");
+      }
       const res = await fetch(url, { cache: "no-store" });
       if (!res.ok) throw new Error(`Couldn't load the sheet (HTTP ${res.status}).`);
       const csv = await res.text();
