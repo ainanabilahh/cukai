@@ -44,7 +44,6 @@ const Index = () => {
     setSearchQuery,
     filterCategory,
     setFilterCategory,
-    switchYear,
   } = useDeductions(selectedYear);
 
   const [dataYears, setDataYears] = useState<number[]>([]);
@@ -64,7 +63,6 @@ const Index = () => {
   const handleYearChange = (year: string) => {
     const y = parseInt(year);
     setSelectedYear(y);
-    switchYear(y);
   };
 
   return (

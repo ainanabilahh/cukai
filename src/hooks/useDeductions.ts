@@ -42,12 +42,13 @@ export function useDeductions(year: number) {
   const [filterCategory, setFilterCategory] = useState<DeductionCategory | "all">("all");
 
   useEffect(() => {
-    fetchDeductions(year).then(setDeductions);
+    // Ignore a response for a year the user has already switched away from
+    let current = true;
+    fetchDeductions(year)
+      .then((rows) => { if (current) setDeductions(rows); })
+      .catch((err) => console.error("Failed to load deductions:", err));
+    return () => { current = false; };
   }, [year]);
-
-  const switchYear = useCallback((newYear: number) => {
-    fetchDeductions(newYear).then(setDeductions);
-  }, []);
 
   const addDeduction = useCallback(async (deduction: Omit<Deduction, "id">) => {
     const db = await getDb();
@@ -71,28 +72,35 @@ export function useDeductions(year: number) {
     setDeductions((prev) => [newDeduction, ...prev]);
   }, [year]);
 
-  const importDeductions = useCallback(async (items: Omit<Deduction, "id">[]) => {
+  /** Inserts the items and returns how many were saved; stops at the first failure without throwing. */
+  const importDeductions = useCallback(async (items: Omit<Deduction, "id">[]): Promise<number> => {
     const db = await getDb();
-    for (const item of items) {
-      const id = crypto.randomUUID();
-      await db.execute(
-        `INSERT INTO deductions (id, year, category, amount, date, description, frequency, month, receipt_images)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [
-          id,
-          year,
-          item.category,
-          item.amount,
-          item.date,
-          item.description,
-          item.frequency,
-          item.month ?? null,
-          item.receiptImages ? JSON.stringify(item.receiptImages) : null,
-        ]
-      );
+    let saved = 0;
+    try {
+      for (const item of items) {
+        const id = crypto.randomUUID();
+        await db.execute(
+          `INSERT INTO deductions (id, year, category, amount, date, description, frequency, month, receipt_images)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            id,
+            year,
+            item.category,
+            item.amount,
+            item.date,
+            item.description,
+            item.frequency,
+            item.month ?? null,
+            item.receiptImages ? JSON.stringify(item.receiptImages) : null,
+          ]
+        );
+        saved++;
+      }
+    } catch (err) {
+      console.error("Import stopped after", saved, "rows:", err);
     }
-    const fresh = await fetchDeductions(year);
-    setDeductions(fresh);
+    setDeductions(await fetchDeductions(year));
+    return saved;
   }, [year]);
 
   const checkDuplicate = useCallback(
@@ -180,6 +188,5 @@ export function useDeductions(year: number) {
     setSearchQuery,
     filterCategory,
     setFilterCategory,
-    switchYear,
   };
 }

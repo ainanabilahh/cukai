@@ -3,11 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Deduction } from "@/lib/deduction-data";
 import { toast } from "sonner";
 import { useRef } from "react";
+import { deductionsToCsv, parseImportedDeductions } from "@/lib/import-export";
 
 interface Props {
   deductions: Deduction[];
   year: number;
-  onImport: (deductions: Omit<Deduction, "id">[]) => void;
+  onImport: (deductions: Omit<Deduction, "id">[]) => Promise<number>;
 }
 
 export function DataImportExport({ deductions, year, onImport }: Props) {
@@ -15,49 +16,64 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
 
   const exportJSON = () => {
     const blob = new Blob([JSON.stringify(deductions, null, 2)], { type: "application/json" });
-    download(blob, `tax-deductions-${year}.json`);
-    toast.success("Exported as JSON");
+    download(blob, `cukai-claims-${year}.json`)
+      .then((ok) => ok && toast.success("Exported as JSON"))
+      .catch(() => toast.error("Couldn't save the export."));
   };
 
   const exportCSV = () => {
-    const headers = ["Category", "Amount", "Date", "Description", "Frequency", "Month"];
-    const rows = deductions.map((d) => [
-      `"${d.category}"`,
-      d.amount,
-      d.date,
-      `"${d.description}"`,
-      d.frequency,
-      d.month || "",
-    ]);
-    const csv = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    download(blob, `tax-deductions-${year}.csv`);
-    toast.success("Exported as CSV");
+    // BOM so Excel reads the file as UTF-8
+    const blob = new Blob(["\uFEFF" + deductionsToCsv(deductions)], { type: "text/csv" });
+    download(blob, `cukai-claims-${year}.csv`)
+      .then((ok) => ok && toast.success("Exported as CSV"))
+      .catch(() => toast.error("Couldn't save the export."));
   };
 
-  const download = (blob: Blob, filename: string) => {
+  const download = async (blob: Blob, filename: string) => {
+    if ("__TAURI_INTERNALS__" in window) {
+      // The desktop webview ignores <a download>, so ask where to save and write the file
+      const { save } = await import("@tauri-apps/plugin-dialog");
+      const { writeFile } = await import("@tauri-apps/plugin-fs");
+      const path = await save({ defaultPath: filename });
+      if (!path) return false;
+      await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
+      return true;
+    }
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => {
+    reader.onload = async () => {
+      let parsed: ReturnType<typeof parseImportedDeductions>;
       try {
-        const data = JSON.parse(reader.result as string);
-        if (!Array.isArray(data)) throw new Error("Invalid format");
-        const items = data.map(({ id, ...rest }: Deduction) => rest);
-        onImport(items);
-        toast.success(`Imported ${items.length} deductions`);
+        parsed = parseImportedDeductions(JSON.parse(reader.result as string));
       } catch {
         toast.error("Invalid JSON file. Please use a file exported from this app.");
+        return;
       }
+      const { items, skipped } = parsed;
+      if (items.length === 0) {
+        toast.error("No valid deductions found in that file.");
+        return;
+      }
+      let saved = 0;
+      try {
+        saved = await onImport(items);
+      } catch (err) {
+        console.error("Import failed:", err);
+      }
+      const note = skipped > 0 ? ` (${skipped} invalid row${skipped === 1 ? "" : "s"} skipped)` : "";
+      if (saved === items.length) toast.success(`Imported ${saved} deductions${note}`);
+      else toast.error(`Imported ${saved} of ${items.length} deductions before an error${note}`);
     };
     reader.readAsText(file);
     if (fileRef.current) fileRef.current.value = "";
