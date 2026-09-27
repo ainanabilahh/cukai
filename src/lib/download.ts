@@ -24,15 +24,15 @@ export async function saveBlob(blob: Blob, filename: string): Promise<boolean> {
 export function printHtml(html: string) {
   const frame = document.createElement("iframe");
   frame.setAttribute("sandbox", "allow-same-origin allow-modals");
-  frame.style.position = "fixed";
-  frame.style.width = "0";
-  frame.style.height = "0";
-  frame.style.border = "0";
+  // Off-screen but full size: WebKit prints a zero-size frame as a blank page
+  Object.assign(frame.style, { position: "fixed", left: "-10000px", top: "0", width: "800px", height: "1100px", border: "0" });
   frame.srcdoc = html;
   frame.onload = () => {
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-    setTimeout(() => frame.remove(), 60_000);
+    const win = frame.contentWindow;
+    if (!win) return frame.remove();
+    win.addEventListener("afterprint", () => frame.remove(), { once: true });
+    win.focus();
+    win.print();
   };
   document.body.appendChild(frame);
 }
