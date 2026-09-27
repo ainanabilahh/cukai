@@ -75,12 +75,20 @@ export function useDeductions(year: number) {
     setDeductions((prev) => [newDeduction, ...prev]);
   }, [year]);
 
-  /** Inserts the items and returns how many were saved; stops at the first failure without throwing. */
-  const importDeductions = useCallback(async (items: Omit<Deduction, "id">[]): Promise<number> => {
+  /**
+   * Inserts the items, skipping ones identical to a claim already in the year (so a retried
+   * import doesn't double up). Stops at the first failure without throwing.
+   */
+  const importDeductions = useCallback(async (items: Omit<Deduction, "id">[]): Promise<{ saved: number; duplicates: number }> => {
     const db = await getDb();
+    const key = (d: Omit<Deduction, "id">) => [d.category, d.amount, d.date, d.description.trim().toLowerCase(), d.month ?? ""].join("|");
+    const existing = new Set((await fetchDeductions(year)).map(key));
     let saved = 0;
+    let duplicates = 0;
     try {
       for (const item of items) {
+        if (existing.has(key(item))) { duplicates++; continue; }
+        existing.add(key(item));
         const id = crypto.randomUUID();
         await db.execute(
           `INSERT INTO deductions (id, year, category, amount, date, description, frequency, month, receipt_images)
@@ -104,7 +112,7 @@ export function useDeductions(year: number) {
     }
     const fresh = await fetchDeductions(year);
     if (yearRef.current === year) setDeductions(fresh);
-    return saved;
+    return { saved, duplicates };
   }, [year]);
 
   const checkDuplicate = useCallback(

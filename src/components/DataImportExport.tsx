@@ -9,7 +9,7 @@ import { saveBlob } from "@/lib/download";
 interface Props {
   deductions: Deduction[];
   year: number;
-  onImport: (deductions: Omit<Deduction, "id">[]) => Promise<number>;
+  onImport: (deductions: Omit<Deduction, "id">[]) => Promise<{ saved: number; duplicates: number }>;
 }
 
 export function DataImportExport({ deductions, year, onImport }: Props) {
@@ -47,14 +47,19 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
         toast.error("No valid deductions found in that file.");
         return;
       }
-      let saved = 0;
+      let result = { saved: 0, duplicates: 0 };
       try {
-        saved = await onImport(items);
+        result = await onImport(items);
       } catch (err) {
         console.error("Import failed:", err);
       }
-      const note = skipped > 0 ? ` (${skipped} invalid or other-year row${skipped === 1 ? "" : "s"} skipped)` : "";
-      if (saved === items.length) toast.success(`Imported ${saved} deductions${note}`);
+      const { saved, duplicates } = result;
+      const notes = [
+        skipped > 0 && `${skipped} invalid or other-year skipped`,
+        duplicates > 0 && `${duplicates} already here skipped`,
+      ].filter(Boolean);
+      const note = notes.length ? ` (${notes.join(", ")})` : "";
+      if (saved + duplicates === items.length) toast.success(`Imported ${saved} deductions${note}`);
       else toast.error(`Imported ${saved} of ${items.length} deductions before an error${note}`);
     };
     reader.readAsText(file);

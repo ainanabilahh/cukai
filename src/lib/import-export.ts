@@ -1,5 +1,5 @@
 import { CATEGORIES, Deduction, DeductionCategory } from "@/lib/deduction-data";
-import { isAppFilePath } from "@/hooks/useFileStorage";
+import { isAppFilePath } from "@/lib/files";
 
 /**
  * Checks rows from an exported JSON file; returns the valid ones and how many were skipped.
@@ -22,7 +22,7 @@ export function parseImportedDeductions(data: unknown, year?: number): { items: 
       (r.frequency === "yearly" || r.frequency === "monthly") &&
       (r.month === undefined || r.month === null || typeof r.month === "string") &&
       (r.receiptImages === undefined || (Array.isArray(r.receiptImages) && r.receiptImages.every((x) => typeof x === "string")));
-    const wrongYear = year !== undefined && r.frequency === "monthly" && !String(r.date).startsWith(`${year}-`);
+    const wrongYear = !!valid && year !== undefined && r.frequency === "monthly" && !String(r.date).startsWith(`${year}-`);
     if (!valid || wrongYear) { skipped++; continue; }
     items.push({
       category: r.category as DeductionCategory,

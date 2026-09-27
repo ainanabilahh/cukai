@@ -51,7 +51,7 @@ describe("shared limits fallback", () => {
 
 describe("file path safety", () => {
   it("only treats app-created file names as deletable", async () => {
-    const { isAppFilePath } = await import("@/hooks/useFileStorage");
+    const { isAppFilePath } = await import("@/lib/files");
     const id = "0b8f5a4e-3c2d-4e1f-9a7b-6c5d4e3f2a1b";
     expect(isAppFilePath(`2025/receipts/receipt-${id}.png`)).toBe(true);
     expect(isAppFilePath(`2025/ea-form/ea-form-${id}.pdf`)).toBe(true);
@@ -67,5 +67,21 @@ describe("file path safety", () => {
       receiptImages: ["Taxes2023/notes.docx", `2025/receipts/receipt-${id}.jpg`, "data:image/png;base64,AA"],
     }]);
     expect(items[0].receiptImages).toEqual([`2025/receipts/receipt-${id}.jpg`, "data:image/png;base64,AA"]);
+  });
+});
+
+describe("file helpers", () => {
+  it("reads data URL types safely", async () => {
+    const { dataUrlType, fileExtension } = await import("@/lib/files");
+    expect(dataUrlType("data:image/png;base64,AA")).toEqual({ mime: "image/png", ext: "png" });
+    expect(dataUrlType("data:image/png,%89PNG")?.ext).toBe("png");
+    expect(dataUrlType("not a data url")).toBeNull();
+    expect(fileExtension({ type: "image/avif" })).toBe("avif");
+    expect(fileExtension({ type: "", name: "scan.PDF" })).toBe("pdf");
+  });
+
+  it("lets a sheet year turn shared limits off", () => {
+    const sheet = parseRatesSheet("year,type,category,limit\n2026,shared,none,\n");
+    expect(resolveRates(sheet, 2026).shared).toEqual([]);
   });
 });
