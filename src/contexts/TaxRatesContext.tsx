@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, ReactNode } from "react";
 import { parseRatesSheet, resolveRates, ResolvedRates, YearRates } from "@/lib/tax-rates";
 
 const STORAGE_KEY = "cukai.taxRatesSheet";
@@ -45,8 +45,12 @@ export function TaxRatesProvider({ children }: { children: ReactNode }) {
   const [stored, setStored] = useState<StoredSheet | null>(loadStored);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Each load or remove bumps this; a response from an older request is ignored
+  const requestId = useRef(0);
 
   const fetchSheet = useCallback(async (url: string): Promise<boolean> => {
+    const id = ++requestId.current;
+    const isLatest = () => id === requestId.current;
     setLoading(true);
     setError(null);
     try {
@@ -58,15 +62,16 @@ export function TaxRatesProvider({ children }: { children: ReactNode }) {
       }
       const parsed = parseRatesSheet(csv);
       if (parsed.size === 0) throw new Error("No rate rows found in the sheet.");
+      if (!isLatest()) return false;
       const next = { url, csv, fetchedAt: new Date().toISOString() };
       setStored(next);
       saveStored(next);
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't load the sheet.");
+      if (isLatest()) setError(err instanceof Error ? err.message : "Couldn't load the sheet.");
       return false;
     } finally {
-      setLoading(false);
+      if (isLatest()) setLoading(false);
     }
   }, []);
 
@@ -78,6 +83,8 @@ export function TaxRatesProvider({ children }: { children: ReactNode }) {
 
   const setSheetUrl = useCallback(async (url: string | null) => {
     if (!url) {
+      requestId.current++;
+      setLoading(false);
       setStored(null);
       saveStored(null);
       setError(null);

@@ -121,8 +121,7 @@ export function parseRatesSheet(csv: string): Map<number, Partial<YearRates>> {
 /**
  * Picks the rates for a year of assessment: the sheet's rows for that year,
  * or the latest earlier year in the sheet, otherwise the built-in YA 2025 rates.
- * Categories missing from the sheet keep their built-in limit; shared limits come
- * only from the sheet once a year is in it.
+ * Categories, brackets and shared limits missing from the sheet keep their built-in values.
  */
 export function resolveRates(sheet: Map<number, Partial<YearRates>> | null, year: number): ResolvedRates {
   const years = sheet ? [...sheet.keys()].filter((y) => y <= year).sort((a, b) => b - a) : [];
@@ -134,7 +133,7 @@ export function resolveRates(sheet: Map<number, Partial<YearRates>> | null, year
   return {
     limits: { ...BUILT_IN_RATES.limits, ...entry.limits },
     brackets: entry.brackets && entry.brackets.length > 0 ? entry.brackets : BUILT_IN_RATES.brackets,
-    shared: entry.shared ?? [],
+    shared: entry.shared ?? BUILT_IN_RATES.shared,
     year: picked,
     source: "sheet",
   };
