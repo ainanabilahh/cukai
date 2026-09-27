@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDeductions } from "@/hooks/useDeductions";
+import { useEAForms } from "@/hooks/useEAForms";
 import { AddDeductionDialog } from "@/components/AddDeductionDialog";
 import { DeductionList } from "@/components/DeductionList";
 import { DeductionFilters } from "@/components/DeductionFilters";
@@ -51,6 +52,7 @@ const Index = () => {
     setFilterCategory,
   } = useDeductions(selectedYear);
 
+  const ea = useEAForms(selectedYear);
   const fileStorage = useFileStorageContext();
   const handleDelete = async (id: string) => {
     const receipts = deductions.find((d) => d.id === id)?.receiptImages ?? [];
@@ -139,12 +141,12 @@ const Index = () => {
 
         {/* Forms */}
         <div className="grid gap-6 lg:grid-cols-2">
-          <EAFormSection year={selectedYear} />
+          <EAFormSection year={selectedYear} ea={ea} />
           <BEFormSection year={selectedYear} />
         </div>
 
         {/* Tax Calculator */}
-        <TaxCalculator totalReliefs={reliefs.total} overLimit={reliefs.excess} zakatAmount={zakatAmount} rates={rates} />
+        <TaxCalculator year={selectedYear} eaIncome={ea.totals.income} eaPcb={ea.totals.pcb} totalReliefs={reliefs.total} overLimit={reliefs.excess} zakatAmount={zakatAmount} rates={rates} />
 
 
         <div className="grid gap-6 lg:grid-cols-3">

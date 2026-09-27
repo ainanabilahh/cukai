@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { ChevronDown, ChevronUp, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,16 +10,42 @@ import { calculateTax, formatRM } from "@/lib/tax-calculator";
 import { ResolvedRates } from "@/lib/tax-rates";
 
 interface TaxCalculatorProps {
+  year: number;
+  eaIncome: number | null; // sum of this year's EA forms, when entered
+  eaPcb: number | null;
   totalReliefs: number; // already capped at category and shared limits, excluding zakat
   overLimit: number; // amount claimed above category limits (not counted)
   zakatAmount: number;
   rates: ResolvedRates;
 }
 
-export function TaxCalculator({ totalReliefs, overLimit, zakatAmount, rates }: TaxCalculatorProps) {
-  const [totalIncome, setTotalIncome] = useState<string>("");
-  const [pcbPaid, setPcbPaid] = useState<string>("");
+// Figures typed over the EA totals are remembered per year on this device
+const overridesKey = (year: number) => `cukai.taxInputs.${year}`;
+type Overrides = { income?: string; pcb?: string };
+
+function loadOverrides(year: number): Overrides {
+  try { return JSON.parse(localStorage.getItem(overridesKey(year)) ?? "{}"); } catch { return {}; }
+}
+
+function saveOverrides(year: number, value: Overrides) {
+  try { localStorage.setItem(overridesKey(year), JSON.stringify(value)); } catch { /* storage unavailable */ }
+}
+
+export function TaxCalculator({ year, eaIncome, eaPcb, totalReliefs, overLimit, zakatAmount, rates }: TaxCalculatorProps) {
+  const [overrides, setOverrides] = useState<Overrides>(() => loadOverrides(year));
   const [showBrackets, setShowBrackets] = useState(false);
+  useEffect(() => setOverrides(loadOverrides(year)), [year]);
+
+  const setOverride = (key: keyof Overrides, value: string | undefined) => {
+    const next = { ...overrides, [key]: value };
+    if (value === undefined || value.trim() === "") delete next[key]; // clearing goes back to the EA total
+    setOverrides(next);
+    saveOverrides(year, next);
+  };
+
+  // Typed figures win; otherwise use the EA forms' totals
+  const totalIncome = overrides.income ?? (eaIncome !== null ? String(eaIncome) : "");
+  const pcbPaid = overrides.pcb ?? (eaPcb !== null ? String(eaPcb) : "");
 
   const income = parseFloat(totalIncome) || 0;
   const pcb = parseFloat(pcbPaid) || 0;
@@ -51,10 +77,10 @@ export function TaxCalculator({ totalReliefs, overLimit, zakatAmount, rates }: T
               type="number"
               placeholder="e.g. 79033"
               value={totalIncome}
-              onChange={(e) => setTotalIncome(e.target.value)}
+              onChange={(e) => setOverride("income", e.target.value)}
               min={0}
             />
-            <p className="text-xs text-muted-foreground">From EA form or total employment income</p>
+            <SourceHint typed={overrides.income !== undefined} eaValue={eaIncome} onReset={() => setOverride("income", undefined)} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="pcbPaid" className="text-sm">PCB Paid (RM)</Label>
@@ -63,10 +89,10 @@ export function TaxCalculator({ totalReliefs, overLimit, zakatAmount, rates }: T
               type="number"
               placeholder="e.g. 3263.65"
               value={pcbPaid}
-              onChange={(e) => setPcbPaid(e.target.value)}
+              onChange={(e) => setOverride("pcb", e.target.value)}
               min={0}
             />
-            <p className="text-xs text-muted-foreground">Monthly tax deductions from salary</p>
+            <SourceHint typed={overrides.pcb !== undefined} eaValue={eaPcb} onReset={() => setOverride("pcb", undefined)} />
           </div>
         </div>
 
@@ -171,6 +197,22 @@ export function TaxCalculator({ totalReliefs, overLimit, zakatAmount, rates }: T
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** Says where a figure came from, with a way back to the EA total after typing over it. */
+function SourceHint({ typed, eaValue, onReset }: { typed: boolean; eaValue: number | null; onReset: () => void }) {
+  if (eaValue === null) {
+    return <p className="text-xs text-muted-foreground">Add amounts to your EA forms to fill this in automatically</p>;
+  }
+  if (!typed) return <p className="text-xs text-muted-foreground">From this year's EA forms</p>;
+  return (
+    <p className="text-xs text-muted-foreground">
+      Edited.{" "}
+      <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={onReset}>
+        Use EA total (RM {formatRM(eaValue)})
+      </button>
+    </p>
   );
 }
 

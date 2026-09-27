@@ -47,6 +47,13 @@ async function migrate(db: Database) {
     // Older EA forms have no year (NULL) and are shown under every year
     await db.execute("ALTER TABLE ea_forms ADD COLUMN year INTEGER");
   }
+  // Amounts from the EA form, used to fill in the tax estimate (NULL when not entered)
+  if (!eaColumns.some((c) => c.name === "total_income")) {
+    await db.execute("ALTER TABLE ea_forms ADD COLUMN total_income REAL");
+  }
+  if (!eaColumns.some((c) => c.name === "pcb")) {
+    await db.execute("ALTER TABLE ea_forms ADD COLUMN pcb REAL");
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS be_forms (

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { getDb } from "@/lib/db";
 
 export interface EAForm {
@@ -8,6 +8,8 @@ export interface EAForm {
   fileType: string;
   uploadedAt: string;
   year: number | null; // null for forms saved before years were tracked
+  totalIncome: number | null; // gross employment income on the form (RM)
+  pcb: number | null; // tax deducted by the employer (PCB/MTD) on the form (RM)
 }
 
 type Row = {
@@ -17,6 +19,8 @@ type Row = {
   file_type: string;
   uploaded_at: string;
   year: number | null;
+  total_income: number | null;
+  pcb: number | null;
 };
 
 function rowToForm(row: Row): EAForm {
@@ -27,6 +31,8 @@ function rowToForm(row: Row): EAForm {
     fileType: row.file_type,
     uploadedAt: row.uploaded_at,
     year: row.year ?? null,
+    totalIncome: row.total_income ?? null,
+    pcb: row.pcb ?? null,
   };
 }
 
@@ -78,11 +84,18 @@ export function useEAForms(year: number) {
     const id = crypto.randomUUID();
     const uploadedAt = new Date().toISOString();
     await db.execute(
-      "INSERT INTO ea_forms (id, employer_name, file_name, file_type, uploaded_at, year) VALUES (?, ?, ?, ?, ?, ?)",
-      [id, form.employerName, form.fileName, form.fileType, uploadedAt, year]
+      `INSERT INTO ea_forms (id, employer_name, file_name, file_type, uploaded_at, year, total_income, pcb)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, form.employerName, form.fileName, form.fileType, uploadedAt, year, form.totalIncome, form.pcb]
     );
     setForms((prev) => [{ ...form, id, uploadedAt, year }, ...prev]);
   }, [year]);
+
+  const updateAmounts = useCallback(async (id: string, totalIncome: number | null, pcb: number | null) => {
+    const db = await getDb();
+    await db.execute("UPDATE ea_forms SET total_income = ?, pcb = ? WHERE id = ?", [totalIncome, pcb, id]);
+    setForms((prev) => prev.map((f) => (f.id === id ? { ...f, totalIncome, pcb } : f)));
+  }, []);
 
   const deleteForm = useCallback(async (id: string) => {
     const db = await getDb();
@@ -98,5 +111,18 @@ export function useEAForms(year: number) {
       .catch((err) => console.error("Failed to load employer names:", err));
   }, [forms, year]);
 
-  return { forms, addForm, deleteForm, employerNames, defaultEmployer };
+  // Year totals from this year's forms that have amounts (older forms without a year are left out)
+  const totals = useMemo(() => {
+    const own = forms.filter((f) => f.year === year);
+    const withIncome = own.filter((f) => f.totalIncome !== null);
+    const withPcb = own.filter((f) => f.pcb !== null);
+    return {
+      income: withIncome.length ? withIncome.reduce((s, f) => s + (f.totalIncome ?? 0), 0) : null,
+      pcb: withPcb.length ? withPcb.reduce((s, f) => s + (f.pcb ?? 0), 0) : null,
+    };
+  }, [forms, year]);
+
+  return { forms, addForm, updateAmounts, deleteForm, employerNames, defaultEmployer, totals };
 }
+
+export type EAFormsState = ReturnType<typeof useEAForms>;
