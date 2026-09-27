@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useBEForms, BEForm } from "@/hooks/useBEForms";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { fileExtension } from "@/hooks/useFileStorage";
 import { toast } from "sonner";
 
 interface BEFormSectionProps {
@@ -21,10 +22,8 @@ export function BEFormSection({ year }: BEFormSectionProps) {
   const yearForms = forms.filter((f) => f.year === year);
 
   const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isSupported) return false;
-    if (fileStorage.isReady) return true;
-    toast.info("Please choose a folder to save your files");
-    return await fileStorage.pickDirectory();
+    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
+    return fileStorage.ensureReady();
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +50,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
     setUploading(true);
     try {
       const id = crypto.randomUUID();
-      const ext = isImage ? "jpg" : "pdf";
+      const ext = fileExtension(file);
       const fileName = `${year}/be-form/be-form-${id}.${ext}`;
 
       const saved = await fileStorage.saveFile(fileName, file);
@@ -84,10 +83,14 @@ export function BEFormSection({ year }: BEFormSectionProps) {
   };
 
   const handleDelete = async (form: BEForm) => {
-    if (fileStorage.isReady) {
-      await fileStorage.deleteFile(form.fileName);
+    try {
+      await deleteForm(form.id); // remove the record first so it never points at a missing file
+    } catch (err) {
+      console.error("Couldn't delete BE form:", err);
+      toast.error("Couldn't delete the form.");
+      return;
     }
-    deleteForm(form.id);
+    if (fileStorage.isReady) await fileStorage.deleteFile(form.fileName);
   };
 
   const handleCloseView = () => {

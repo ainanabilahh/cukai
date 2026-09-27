@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useEAForms, EAForm } from "@/hooks/useEAForms";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { fileExtension } from "@/hooks/useFileStorage";
 import { toast } from "sonner";
 
 interface EAFormSectionProps {
@@ -22,10 +23,8 @@ export function EAFormSection({ year }: EAFormSectionProps) {
   const [viewUrl, setViewUrl] = useState<string | null>(null);
 
   const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isSupported) return false;
-    if (fileStorage.isReady) return true;
-    toast.info("Please choose a folder to save your files");
-    return await fileStorage.pickDirectory();
+    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
+    return fileStorage.ensureReady();
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -57,7 +56,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
     setUploading(true);
     try {
       const id = crypto.randomUUID();
-      const ext = isImage ? "jpg" : "pdf";
+      const ext = fileExtension(file);
       const fileName = `${year}/ea-form/ea-form-${id}.${ext}`;
 
       const saved = await fileStorage.saveFile(fileName, file);
@@ -95,10 +94,14 @@ export function EAFormSection({ year }: EAFormSectionProps) {
   };
 
   const handleDelete = async (form: EAForm) => {
-    if (fileStorage.isReady) {
-      await fileStorage.deleteFile(form.fileName);
+    try {
+      await deleteForm(form.id); // remove the record first so it never points at a missing file
+    } catch (err) {
+      console.error("Couldn't delete EA form:", err);
+      toast.error("Couldn't delete the form.");
+      return;
     }
-    deleteForm(form.id);
+    if (fileStorage.isReady) await fileStorage.deleteFile(form.fileName);
   };
 
   const handleCloseView = () => {

@@ -121,6 +121,15 @@ async function verifyBrowserPermission(handle: FileSystemDirectoryHandle): Promi
   return false;
 }
 
+/** File extension for an uploaded receipt or form, from its real type. */
+export function fileExtension(file: File): string {
+  if (file.type === "application/pdf") return "pdf";
+  if (file.type === "image/png") return "png";
+  if (file.type === "image/webp") return "webp";
+  if (file.type === "image/heic") return "heic";
+  return "jpg";
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useFileStorage() {
   const [customDir, setCustomDir] = useState<string | null>(null);
@@ -130,12 +139,16 @@ export function useFileStorage() {
 
   useEffect(() => {
     if (isTauri()) {
-      loadSavedDir().then((val) => { setCustomDir(val); setIsReady(true); });
+      loadSavedDir()
+        .then((val) => setCustomDir(val))
+        .catch((err) => console.error("Couldn't read the saved storage folder:", err))
+        // The app's own folder always works, even if the custom one couldn't be read
+        .finally(() => setIsReady(true));
     } else {
       getBrowserHandle().then((handle) => {
         if (handle) { setBrowserHandle(handle); setIsReady(true); }
         else { setIsReady(false); }
-      });
+      }).catch(() => setIsReady(false));
     }
   }, []);
 
@@ -229,14 +242,18 @@ export function useFileStorage() {
     const mime = ext === "pdf" ? "application/pdf"
       : ["jpg", "jpeg"].includes(ext) ? "image/jpeg"
       : ext === "png" ? "image/png"
+      : ext === "webp" ? "image/webp"
+      : ext === "heic" ? "image/heic"
       : "application/octet-stream";
 
     if (isTauri()) {
       try {
-        let bytes: Uint8Array;
+        let bytes: Uint8Array | null = null;
         if (customDir) {
-          bytes = await tauriReadFile(`${customDir}/${filePath}`);
-        } else {
+          try { bytes = await tauriReadFile(`${customDir}/${filePath}`); } catch { /* try the app folder below */ }
+        }
+        // Files saved before a custom folder was chosen stay in the app's own folder
+        if (!bytes) {
           const base = await getBaseDir();
           bytes = await tauriReadFile(`files/${filePath}`, { baseDir: base });
         }
@@ -283,6 +300,15 @@ export function useFileStorage() {
     }
   }, [customDir, browserHandle]);
 
+  /** Makes sure there is somewhere to save files, asking for a folder when needed. */
+  const ensureReady = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) return false;
+    if (isReady) return true;
+    return pickDirectory();
+  }, [isSupported, isReady, pickDirectory]);
+
+  const hasCustomFolder = isTauri() ? customDir !== null : browserHandle !== null;
+
   const directoryName = isTauri()
     ? (customDir ?? "App Default")
     : (browserHandle?.name ?? null);
@@ -292,6 +318,8 @@ export function useFileStorage() {
     isReady,
     directoryName,
     customDir,
+    hasCustomFolder,
+    ensureReady,
     pickDirectory,
     changeDirectory: pickDirectory,
     clearDirectory,

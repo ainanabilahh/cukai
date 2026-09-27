@@ -10,7 +10,7 @@ import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { useTaxRatesContext } from "@/contexts/TaxRatesContext";
 
 export function StorageSettings() {
-  const { isSupported, isReady, directoryName, customDir, pickDirectory, clearDirectory } = useFileStorageContext();
+  const { isSupported, isReady, directoryName, hasCustomFolder, pickDirectory, clearDirectory } = useFileStorageContext();
 
   const handlePick = async () => {
     const ok = await pickDirectory();
@@ -55,9 +55,9 @@ export function StorageSettings() {
               <div className="flex gap-2">
                 <Button onClick={handlePick} variant="outline" className="flex-1 gap-2">
                   <FolderOpen className="h-4 w-4" />
-                  {isReady && customDir ? "Change Folder" : "Choose Folder"}
+                  {isReady && hasCustomFolder ? "Change Folder" : "Choose Folder"}
                 </Button>
-                {isReady && customDir && (
+                {isReady && hasCustomFolder && (
                   <Button onClick={handleClear} variant="ghost" className="gap-2 text-destructive hover:text-destructive">
                     <FolderX className="h-4 w-4" />
                     Reset

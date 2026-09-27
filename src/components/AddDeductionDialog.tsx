@@ -12,11 +12,13 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { fileExtension } from "@/hooks/useFileStorage";
 import { toast } from "sonner";
 
 interface Props {
   onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImages?: string[]; frequency: DeductionFrequency; month?: string }) => Promise<void>;
   checkDuplicate?: (d: { category: string; amount: number; date: string; description: string }) => boolean;
+  year: number;
 }
 
 interface ReceiptFile {
@@ -24,7 +26,7 @@ interface ReceiptFile {
   preview: string; // URL or "pdf"
 }
 
-export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
+export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
   const fileStorage = useFileStorageContext();
   const [open, setOpen] = useState(false);
   const [showDupeWarning, setShowDupeWarning] = useState(false);
@@ -43,10 +45,8 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isSupported) return false;
-    if (fileStorage.isReady) return true;
-    toast.info("Please choose a folder to save your files");
-    return await fileStorage.pickDirectory();
+    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
+    return fileStorage.ensureReady();
   };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,8 +116,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       if (storageReady) {
         for (const receipt of receiptFiles) {
           const id = crypto.randomUUID();
-          const ext = receipt.file.type.startsWith("image/") ? "jpg" : "pdf";
-          const fileName = `receipt-${id}.${ext}`;
+          const fileName = `${year}/receipts/receipt-${id}.${fileExtension(receipt.file)}`;
           const saved = await fileStorage.saveFile(fileName, receipt.file);
           if (!saved) {
             await Promise.all(savedFileNames.map((f) => fileStorage.deleteFile(f)));
@@ -161,7 +160,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
     setAmount("");
     setDescription("");
     clearAllReceipts();
-    setMonth("");
+    setMonth(MONTHS[new Date().getMonth()]);
     setShowDupeWarning(false);
     setOpen(false);
   };
