@@ -1,8 +1,11 @@
 import { CATEGORIES, Deduction, DeductionCategory } from "@/lib/deduction-data";
 import { isAppFilePath } from "@/hooks/useFileStorage";
 
-/** Checks rows from an exported JSON file; returns the valid ones and how many were skipped. */
-export function parseImportedDeductions(data: unknown): { items: Omit<Deduction, "id">[]; skipped: number } {
+/**
+ * Checks rows from an exported JSON file; returns the valid ones and how many were skipped.
+ * With a year, monthly claims dated in another year are skipped too.
+ */
+export function parseImportedDeductions(data: unknown, year?: number): { items: Omit<Deduction, "id">[]; skipped: number } {
   if (!Array.isArray(data)) throw new Error("Expected a list of deductions");
   const items: Omit<Deduction, "id">[] = [];
   let skipped = 0;
@@ -19,7 +22,8 @@ export function parseImportedDeductions(data: unknown): { items: Omit<Deduction,
       (r.frequency === "yearly" || r.frequency === "monthly") &&
       (r.month === undefined || r.month === null || typeof r.month === "string") &&
       (r.receiptImages === undefined || (Array.isArray(r.receiptImages) && r.receiptImages.every((x) => typeof x === "string")));
-    if (!valid) { skipped++; continue; }
+    const wrongYear = year !== undefined && r.frequency === "monthly" && !String(r.date).startsWith(`${year}-`);
+    if (!valid || wrongYear) { skipped++; continue; }
     items.push({
       category: r.category as DeductionCategory,
       amount,

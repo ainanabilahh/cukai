@@ -37,7 +37,7 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
     reader.onload = async () => {
       let parsed: ReturnType<typeof parseImportedDeductions>;
       try {
-        parsed = parseImportedDeductions(JSON.parse(reader.result as string));
+        parsed = parseImportedDeductions(JSON.parse(reader.result as string), year);
       } catch {
         toast.error("Invalid JSON file. Please use a file exported from this app.");
         return;
@@ -53,7 +53,7 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
       } catch (err) {
         console.error("Import failed:", err);
       }
-      const note = skipped > 0 ? ` (${skipped} invalid row${skipped === 1 ? "" : "s"} skipped)` : "";
+      const note = skipped > 0 ? ` (${skipped} invalid or other-year row${skipped === 1 ? "" : "s"} skipped)` : "";
       if (saved === items.length) toast.success(`Imported ${saved} deductions${note}`);
       else toast.error(`Imported ${saved} of ${items.length} deductions before an error${note}`);
     };
