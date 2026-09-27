@@ -25,6 +25,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = ""; // let the same file be picked again after an error
     if (!file) return;
     const isImage = file.type.startsWith("image/");
     const isPdf = file.type === "application/pdf";
@@ -45,7 +46,6 @@ export function EAFormSection({ year }: EAFormSectionProps) {
     const storageReady = await fileStorage.ensureReady();
     if (!storageReady) {
       toast.error("Choose a storage folder in Settings to save your forms.");
-      e.target.value = "";
       return;
     }
     
@@ -76,7 +76,6 @@ export function EAFormSection({ year }: EAFormSectionProps) {
       toast.error("Failed to save the form. Please try again.");
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   };
 

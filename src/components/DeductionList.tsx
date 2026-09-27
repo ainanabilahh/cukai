@@ -127,16 +127,15 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     reader.readAsDataURL(file);
   };
 
-  const handleFolderConfirm = async (folderName: string) => {
-    if (!pendingReceipt) return;
+  const handleFolderConfirm = async (folderName: string): Promise<boolean> => {
+    if (!pendingReceipt) return false;
     const { deduction, file } = pendingReceipt;
-    const isImage = file.type.startsWith("image/");
     const receiptFileName = `receipt-${crypto.randomUUID()}.${fileExtension(file)}`;
     const fullPath = `${year}/receipts/${folderName}/${receiptFileName}`;
     const saved = await fileStorage.saveFile(fullPath, file);
     if (!saved) {
       toast.error("Failed to save receipt");
-      return;
+      return false;
     }
     try {
       await onAttachReceipt?.(deduction.id, fullPath);
@@ -144,10 +143,10 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
       console.error("Couldn't attach receipt:", err);
       await fileStorage.deleteFile(fullPath);
       toast.error("Couldn't attach the receipt.");
-      return;
+      return false;
     }
     toast.success("Receipt attached!");
-    setPendingReceipt(null);
+    return true;
   };
 
   const toggleExpand = (id: string) => {
@@ -398,7 +397,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
           onClose={() => setPendingReceipt(null)}
           onConfirm={handleFolderConfirm}
           defaultFolderName={pendingReceipt.deduction.description}
-          fileName={`receipt-preview.${pendingReceipt.file.type.startsWith("image/") ? "jpg" : "pdf"}`}
+          fileName={`receipt-preview.${fileExtension(pendingReceipt.file)}`}
           year={year}
         />
       )}

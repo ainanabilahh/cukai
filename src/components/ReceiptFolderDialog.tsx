@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 interface Props {
   open: boolean;
   onClose: () => void;
-  onConfirm: (folderName: string) => void;
+  onConfirm: (folderName: string) => Promise<boolean>; // true when saved; the dialog stays open otherwise
   defaultFolderName: string;
   fileName: string;
   year: number;
@@ -28,9 +28,14 @@ export function ReceiptFolderDialog({ open, onClose, onConfirm, defaultFolderNam
   const sanitized = sanitizeFolderName(folderName);
   const previewPath = `${year}/receipts/${sanitized || "unnamed"}/${fileName}`;
 
-  const handleConfirm = () => {
-    onConfirm(sanitized || "unnamed");
-    onClose();
+  const [saving, setSaving] = useState(false);
+  const handleConfirm = async () => {
+    setSaving(true);
+    try {
+      if (await onConfirm(sanitized || "unnamed")) onClose();
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -59,7 +64,7 @@ export function ReceiptFolderDialog({ open, onClose, onConfirm, defaultFolderNam
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleConfirm}>Save Receipt</Button>
+          <Button onClick={handleConfirm} disabled={saving}>{saving ? "Saving…" : "Save Receipt"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

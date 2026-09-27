@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Upload, X, FileText, ChevronsUpDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -161,35 +161,50 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
     setOpen(false);
   };
 
-  const handleSubmit = () => {
-    if (saving) return;
+  /** Returns the amount when the form is complete, otherwise shows why and returns null. */
+  const validate = (): number | null => {
     if (receiptFiles.length === 0) {
       toast.error("Please upload at least one receipt");
-      return;
+      return null;
     }
     const num = parseFloat(amount);
-    if (!num || num <= 0) {
+    if (!Number.isFinite(num) || num <= 0) {
       toast.error("Please enter a valid amount");
-      return;
+      return null;
     }
     if (!description.trim()) {
       toast.error("Please enter a description");
-      return;
+      return null;
     }
     if (frequency === "monthly" && !month) {
       toast.error("Please select a month");
-      return;
+      return null;
     }
     if (frequency === "monthly" && date.getFullYear() !== year) {
       toast.error(`The date must be in ${year}, the year of assessment you're adding to.`);
-      return;
+      return null;
     }
+    return num;
+  };
+
+  const handleSubmit = () => {
+    if (saving) return;
+    const num = validate();
+    if (num === null) return;
     if (checkDuplicate && checkDuplicate({ category, amount: num, date: storedDate, description: description.trim() })) {
       setShowDupeWarning(true);
       return;
     }
     doSubmit();
   };
+
+  const handleAddAnyway = () => {
+    if (saving || validate() === null) return;
+    doSubmit();
+  };
+
+  // The duplicate warning only applies to the values it was shown for
+  useEffect(() => setShowDupeWarning(false), [category, amount, description, storedDate, frequency]);
 
   return (
     <Dialog open={open} onOpenChange={(v) => {
@@ -352,7 +367,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
               <p className="text-xs text-muted-foreground">A claim with the same category, amount, date, and description already exists.</p>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setShowDupeWarning(false)}>Cancel</Button>
-                <Button size="sm" onClick={doSubmit} disabled={saving}>Add Anyway</Button>
+                <Button size="sm" onClick={handleAddAnyway} disabled={saving}>Add Anyway</Button>
               </div>
             </div>
           )}
