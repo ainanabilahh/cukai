@@ -39,6 +39,17 @@ async function fetchForms(year: number): Promise<EAForm[]> {
   return rows.map(rowToForm);
 }
 
+/** Employer names used before, most recently used first. */
+async function fetchEmployerNames(): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ employer_name: string }[]>(
+    `SELECT employer_name FROM ea_forms
+     GROUP BY employer_name COLLATE NOCASE
+     ORDER BY MAX(uploaded_at) DESC`
+  );
+  return rows.map((r) => r.employer_name);
+}
+
 export function useEAForms(year: number) {
   const [forms, setForms] = useState<EAForm[]>([]);
 
@@ -67,5 +78,12 @@ export function useEAForms(year: number) {
     setForms((prev) => prev.filter((f) => f.id !== id));
   }, []);
 
-  return { forms, addForm, deleteForm };
+  const [employerNames, setEmployerNames] = useState<string[]>([]);
+  useEffect(() => {
+    fetchEmployerNames()
+      .then(setEmployerNames)
+      .catch((err) => console.error("Failed to load employer names:", err));
+  }, [forms]);
+
+  return { forms, addForm, deleteForm, employerNames };
 }

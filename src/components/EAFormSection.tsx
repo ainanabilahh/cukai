@@ -15,7 +15,7 @@ interface EAFormSectionProps {
 }
 
 export function EAFormSection({ year }: EAFormSectionProps) {
-  const { forms, addForm, deleteForm } = useEAForms(year);
+  const { forms, addForm, deleteForm, employerNames } = useEAForms(year);
   const fileStorage = useFileStorageContext();
   const [employerName, setEmployerName] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -124,8 +124,13 @@ export function EAFormSection({ year }: EAFormSectionProps) {
               <Input
                 placeholder="e.g. Syarikat ABC Sdn Bhd"
                 value={employerName}
+                list="employer-names"
+                autoComplete="off"
                 onChange={(e) => setEmployerName(e.target.value)}
               />
+              <datalist id="employer-names">
+                {employerNames.map((name) => <option key={name} value={name} />)}
+              </datalist>
             </div>
             <label
               className={`flex flex-col items-center gap-2 rounded-lg border-2 border-dashed border-muted-foreground/25 p-4 cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50 ${!employerName.trim() ? "opacity-60" : ""}`}
