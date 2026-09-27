@@ -179,7 +179,7 @@ const Index = () => {
                 <CardTitle className="font-display">Category Breakdown</CardTitle>
               </CardHeader>
               <CardContent>
-                <CategoryBreakdown totalByCategory={totalByCategory} limits={rates.limits} />
+                <CategoryBreakdown totalByCategory={totalByCategory} limits={rates.limits} shared={rates.shared} />
                 {categoryData.length === 0 && (
                   <p className="text-sm text-muted-foreground text-center py-8">No data yet</p>
                 )}

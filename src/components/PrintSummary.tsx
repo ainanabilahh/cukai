@@ -1,7 +1,7 @@
 import { Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Deduction } from "@/lib/deduction-data";
-import { limitFor } from "@/lib/tax-rates";
+import { limitFor, sharedOverages } from "@/lib/tax-rates";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { escapeHtml } from "@/lib/utils";
 import { printHtml } from "@/lib/download";
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function PrintSummary({ deductions, totalByCategory, total, year }: Props) {
-  const { limits } = useTaxRates(year);
+  const { limits, shared } = useTaxRates(year);
   const handlePrint = () => {
     const entries = Object.entries(totalByCategory).sort((a, b) => b[1] - a[1]);
     const fmt = (n: number) => `RM ${n.toLocaleString("en-MY", { minimumFractionDigits: 2 })}`;
@@ -58,6 +58,9 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
                 <td class="amount ${isOver ? 'over-limit' : ''}">${isOver ? '⚠ Over limit' : '✓'}</td>
               </tr>`;
             }).join("")}
+            ${sharedOverages(totalByCategory, limits, shared).map((g) => `<tr>
+                <td colspan="4" class="over-limit">⚠ ${escapeHtml(g.categories.join(" + "))} share a ${fmt(g.limit)} limit; ${fmt(g.claimed)} claimed, only ${fmt(g.limit)} counts.</td>
+              </tr>`).join("")}
             <tr class="total-row">
               <td>Total</td>
               <td class="amount" colspan="3">${fmt(total)}</td>

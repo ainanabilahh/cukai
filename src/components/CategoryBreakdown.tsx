@@ -1,12 +1,14 @@
-import { limitFor } from "@/lib/tax-rates";
+import { limitFor, sharedOverages, SharedLimit } from "@/lib/tax-rates";
 import { Progress } from "@/components/ui/progress";
 
 interface Props {
   totalByCategory: Record<string, number>;
   limits: Record<string, number>;
+  shared?: SharedLimit[];
 }
 
-export function CategoryBreakdown({ totalByCategory, limits }: Props) {
+export function CategoryBreakdown({ totalByCategory, limits, shared = [] }: Props) {
+  const overShared = sharedOverages(totalByCategory, limits, shared);
   const entries = Object.entries(totalByCategory).sort((a, b) => b[1] - a[1]);
 
   if (entries.length === 0) return null;
@@ -35,6 +37,12 @@ export function CategoryBreakdown({ totalByCategory, limits }: Props) {
           </div>
         );
       })}
+      {overShared.map((g) => (
+        <p key={g.categories.join("+")} className="text-xs text-destructive">
+          {g.categories.join(" + ")} share a RM {g.limit.toLocaleString()} limit. You've claimed RM{" "}
+          {g.claimed.toLocaleString("en-MY", { minimumFractionDigits: 2 })}, so only RM {g.limit.toLocaleString()} counts.
+        </p>
+      ))}
     </div>
   );
 }

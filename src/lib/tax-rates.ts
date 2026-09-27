@@ -143,6 +143,20 @@ export function limitFor(limits: Record<string, number>, category: string): numb
   return limits[category] ?? Infinity;
 }
 
+/** Shared groups whose combined claims (each already capped) go over the group's limit. */
+export function sharedOverages(
+  totalByCategory: Record<string, number>,
+  limits: Record<string, number>,
+  shared: SharedLimit[],
+) {
+  return shared
+    .map((group) => ({
+      ...group,
+      claimed: group.categories.reduce((sum, c) => sum + Math.min(totalByCategory[c] ?? 0, limitFor(limits, c)), 0),
+    }))
+    .filter((g) => g.claimed > g.limit);
+}
+
 /**
  * Sums reliefs with each category capped at its own limit, then each shared group
  * capped at its combined limit. Rebate categories (Zakat) are left out.
