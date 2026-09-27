@@ -27,3 +27,10 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-fs = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-persisted-scope = "2"
+
+# Build scripts and proc macros are built like debug builds: on macOS 27 the linker's
+# optimized proc-macro dylibs fail to load ("mis-aligned LINKEDIT string pool").
+# The app itself is still fully optimized.
+[profile.release.build-override]
+debug = true
+opt-level = 0
