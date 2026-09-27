@@ -4,6 +4,7 @@ import { Deduction } from "@/lib/deduction-data";
 import { toast } from "sonner";
 import { useRef } from "react";
 import { deductionsToCsv, parseImportedDeductions } from "@/lib/import-export";
+import { saveBlob } from "@/lib/download";
 
 interface Props {
   deductions: Deduction[];
@@ -16,7 +17,7 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
 
   const exportJSON = () => {
     const blob = new Blob([JSON.stringify(deductions, null, 2)], { type: "application/json" });
-    download(blob, `cukai-claims-${year}.json`)
+    saveBlob(blob, `cukai-claims-${year}.json`)
       .then((ok) => ok && toast.success("Exported as JSON"))
       .catch(() => toast.error("Couldn't save the export."));
   };
@@ -24,28 +25,9 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
   const exportCSV = () => {
     // BOM so Excel reads the file as UTF-8
     const blob = new Blob(["\uFEFF" + deductionsToCsv(deductions)], { type: "text/csv" });
-    download(blob, `cukai-claims-${year}.csv`)
+    saveBlob(blob, `cukai-claims-${year}.csv`)
       .then((ok) => ok && toast.success("Exported as CSV"))
       .catch(() => toast.error("Couldn't save the export."));
-  };
-
-  const download = async (blob: Blob, filename: string) => {
-    if ("__TAURI_INTERNALS__" in window) {
-      // The desktop webview ignores <a download>, so ask where to save and write the file
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const { writeFile } = await import("@tauri-apps/plugin-fs");
-      const path = await save({ defaultPath: filename });
-      if (!path) return false;
-      await writeFile(path, new Uint8Array(await blob.arrayBuffer()));
-      return true;
-    }
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return true;
   };
 
   const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {

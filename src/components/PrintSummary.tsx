@@ -4,6 +4,7 @@ import { Deduction } from "@/lib/deduction-data";
 import { limitFor } from "@/lib/tax-rates";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { escapeHtml } from "@/lib/utils";
+import { printHtml } from "@/lib/download";
 
 interface Props {
   deductions: Deduction[];
@@ -84,13 +85,7 @@ export function PrintSummary({ deductions, totalByCategory, total, year }: Props
       </html>
     `;
 
-    const w = window.open("", "_blank");
-    if (w) {
-      w.opener = null; // the print window gets no handle back into the app
-      w.document.write(html);
-      w.document.close();
-      w.print();
-    }
+    printHtml(html);
   };
 
   return (

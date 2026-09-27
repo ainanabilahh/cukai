@@ -10,6 +10,7 @@ import { Separator } from "@/components/ui/separator";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { ReceiptFolderDialog } from "@/components/ReceiptFolderDialog";
 import { toast } from "sonner";
+import { saveBlob } from "@/lib/download";
 
 interface Props {
   deductions: Deduction[];
@@ -74,10 +75,11 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
   const handleDownload = () => {
     if (!viewingReceipt) return;
     const current = viewingReceipt.urls[viewingReceipt.currentIndex];
-    const a = document.createElement("a");
-    a.href = current.url;
-    a.download = `receipt-${viewingReceipt.currentIndex + 1}`;
-    a.click();
+    const ext = current.type === "pdf" ? "pdf" : "jpg";
+    fetch(current.url)
+      .then((res) => res.blob())
+      .then((blob) => saveBlob(blob, `receipt-${viewingReceipt.currentIndex + 1}.${ext}`))
+      .catch(() => toast.error("Couldn't save the receipt."));
   };
 
   const navigateReceipt = (dir: number) => {
