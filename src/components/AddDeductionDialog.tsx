@@ -15,7 +15,7 @@ import { useFileStorageContext } from "@/contexts/FileStorageContext";
 import { toast } from "sonner";
 
 interface Props {
-  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImages?: string[]; frequency: DeductionFrequency; month?: string }) => void;
+  onAdd: (d: { category: DeductionCategory; amount: number; date: string; description: string; receiptImages?: string[]; frequency: DeductionFrequency; month?: string }) => Promise<void>;
   checkDuplicate?: (d: { category: string; amount: number; date: string; description: string }) => boolean;
 }
 
@@ -93,7 +93,21 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
     setReceiptFiles([]);
   };
 
+  const [saving, setSaving] = useState(false);
+  // Yearly claims are stored without a date
+  const storedDate = frequency === "monthly" ? format(date, "yyyy-MM-dd") : "";
+
   const doSubmit = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      await saveClaim();
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveClaim = async () => {
     const num = parseFloat(amount);
     const savedFileNames: string[] = [];
 
@@ -106,6 +120,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
           const fileName = `receipt-${id}.${ext}`;
           const saved = await fileStorage.saveFile(fileName, receipt.file);
           if (!saved) {
+            await Promise.all(savedFileNames.map((f) => fileStorage.deleteFile(f)));
             toast.error("Failed to save a receipt to folder");
             return;
           }
@@ -125,15 +140,23 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       }
     }
 
-    onAdd({
-      category,
-      amount: num,
-      date: frequency === "monthly" ? format(date, "yyyy-MM-dd") : "",
-      description: description.trim(),
-      receiptImages: savedFileNames.length > 0 ? savedFileNames : undefined,
-      frequency,
-      month: frequency === "monthly" ? month : undefined,
-    });
+    try {
+      await onAdd({
+        category,
+        amount: num,
+        date: storedDate,
+        description: description.trim(),
+        receiptImages: savedFileNames.length > 0 ? savedFileNames : undefined,
+        frequency,
+        month: frequency === "monthly" ? month : undefined,
+      });
+    } catch (err) {
+      console.error("Failed to save claim:", err);
+      // Don't leave receipt files behind for a claim that wasn't saved
+      await Promise.all(savedFileNames.filter((f) => !f.startsWith("data:")).map((f) => fileStorage.deleteFile(f)));
+      toast.error("Couldn't save the claim. Please try again.");
+      return;
+    }
     toast.success("Claim added successfully!");
     setAmount("");
     setDescription("");
@@ -144,6 +167,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
   };
 
   const handleSubmit = () => {
+    if (saving) return;
     if (receiptFiles.length === 0) {
       toast.error("Please upload at least one receipt");
       return;
@@ -161,7 +185,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
       toast.error("Please select a month");
       return;
     }
-    if (checkDuplicate && checkDuplicate({ category, amount: num, date: format(date, "yyyy-MM-dd"), description: description.trim() })) {
+    if (checkDuplicate && checkDuplicate({ category, amount: num, date: storedDate, description: description.trim() })) {
       setShowDupeWarning(true);
       return;
     }
@@ -324,11 +348,13 @@ export function AddDeductionDialog({ onAdd, checkDuplicate }: Props) {
               <p className="text-xs text-muted-foreground">A claim with the same category, amount, date, and description already exists.</p>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => setShowDupeWarning(false)}>Cancel</Button>
-                <Button size="sm" onClick={doSubmit}>Add Anyway</Button>
+                <Button size="sm" onClick={doSubmit} disabled={saving}>Add Anyway</Button>
               </div>
             </div>
           )}
-          <Button onClick={handleSubmit} className="w-full font-display font-semibold">Save</Button>
+          <Button onClick={handleSubmit} disabled={saving} className="w-full font-display font-semibold">
+            {saving ? "Saving…" : "Save"}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
