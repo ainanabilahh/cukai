@@ -1,12 +1,20 @@
 import Database from "@tauri-apps/plugin-sql";
 
-let _db: Database | null = null;
+let dbPromise: Promise<Database> | null = null;
 
-export async function getDb(): Promise<Database> {
-  if (_db) return _db;
-  _db = await Database.load("sqlite:income_tax.db");
-  await migrate(_db);
-  return _db;
+/** Opens the database once; every caller waits for the same load and migration. */
+export function getDb(): Promise<Database> {
+  if (!dbPromise) {
+    dbPromise = (async () => {
+      const db = await Database.load("sqlite:income_tax.db");
+      await migrate(db);
+      return db;
+    })().catch((err) => {
+      dbPromise = null; // allow a retry after a failed open
+      throw err;
+    });
+  }
+  return dbPromise;
 }
 
 async function migrate(db: Database) {
@@ -33,6 +41,12 @@ async function migrate(db: Database) {
       uploaded_at   TEXT NOT NULL
     );
   `);
+
+  const eaColumns = await db.select<{ name: string }[]>("PRAGMA table_info(ea_forms)");
+  if (!eaColumns.some((c) => c.name === "year")) {
+    // Older EA forms have no year (NULL) and are shown under every year
+    await db.execute("ALTER TABLE ea_forms ADD COLUMN year INTEGER");
+  }
 
   await db.execute(`
     CREATE TABLE IF NOT EXISTS be_forms (
@@ -73,7 +87,10 @@ export async function setSetting(key: string, value: string): Promise<void> {
 export async function getYearsWithData(): Promise<number[]> {
   const db = await getDb();
   const rows = await db.select<{ year: number }[]>(
-    "SELECT year FROM deductions UNION SELECT year FROM be_forms ORDER BY year DESC"
+    `SELECT year FROM deductions
+     UNION SELECT year FROM be_forms
+     UNION SELECT year FROM ea_forms WHERE year IS NOT NULL
+     ORDER BY year DESC`
   );
   return rows.map((r) => Number(r.year));
 }

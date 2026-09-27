@@ -39,7 +39,9 @@ export function useBEForms() {
   const [forms, setForms] = useState<BEForm[]>([]);
 
   useEffect(() => {
-    fetchForms().then(setForms);
+    fetchForms()
+      .then(setForms)
+      .catch((err) => console.error("Failed to load BE forms:", err));
   }, []);
 
   const addForm = useCallback(async (form: Omit<BEForm, "id" | "uploadedAt">) => {
