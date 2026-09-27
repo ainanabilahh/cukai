@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { toast } from "sonner";
 
 const isTauri = () => "__TAURI_INTERNALS__" in window;
 
@@ -50,6 +51,20 @@ async function loadSavedDir(): Promise<string | null> {
 async function saveDir(dir: string) {
   const { setSetting } = await import("@/lib/db");
   return setSetting(SETTING_KEY, dir);
+}
+
+// Every custom folder used so far, so files saved in an earlier folder stay reachable
+const HISTORY_KEY = "files_directory_history";
+
+async function loadDirHistory(): Promise<string[]> {
+  const { getSetting } = await import("@/lib/db");
+  try { return JSON.parse((await getSetting(HISTORY_KEY)) ?? "[]"); } catch { return []; }
+}
+
+async function addDirToHistory(dir: string) {
+  const { setSetting } = await import("@/lib/db");
+  const history = await loadDirHistory();
+  if (!history.includes(dir)) await setSetting(HISTORY_KEY, JSON.stringify([...history, dir]));
 }
 
 async function clearDir() {
@@ -130,24 +145,43 @@ export function fileExtension(file: File): string {
   return "jpg";
 }
 
+/**
+ * Only files the app itself created may be deleted: <name>-<uuid>.<ext>, optionally under
+ * folders, with no "..". Guards against paths that came from an imported file.
+ */
+export function isAppFilePath(filePath: string): boolean {
+  if (filePath.includes("..") || filePath.startsWith("/") || filePath.includes("\\")) return false;
+  return /^([\w .-]+\/)*(receipt|ea-form|be-form)-[0-9a-f-]{36}\.(jpg|png|webp|heic|pdf)$/i.test(filePath);
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 export function useFileStorage() {
   const [customDir, setCustomDir] = useState<string | null>(null);
   const [browserHandle, setBrowserHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isReady, setIsReady] = useState(false);
   const [isSupported] = useState(() => isTauri() || "showDirectoryPicker" in window);
+  // Refs so a save right after picking a folder uses the new folder, not the one from the last render
+  const customDirRef = useRef<string | null>(null);
+  const browserHandleRef = useRef<FileSystemDirectoryHandle | null>(null);
+  const pastDirsRef = useRef<string[]>([]);
+
+  const applyCustomDir = (dir: string | null) => { customDirRef.current = dir; setCustomDir(dir); };
+  const applyBrowserHandle = (h: FileSystemDirectoryHandle | null) => { browserHandleRef.current = h; setBrowserHandle(h); };
 
   useEffect(() => {
     if (isTauri()) {
-      loadSavedDir()
-        .then((val) => setCustomDir(val))
+      Promise.all([loadSavedDir(), loadDirHistory()])
+        .then(([dir, history]) => {
+          applyCustomDir(dir);
+          pastDirsRef.current = history;
+        })
         .catch((err) => console.error("Couldn't read the saved storage folder:", err))
         // The app's own folder always works, even if the custom one couldn't be read
         .finally(() => setIsReady(true));
     } else {
       getBrowserHandle().then((handle) => {
-        if (handle) { setBrowserHandle(handle); setIsReady(true); }
-        else { setIsReady(false); }
+        applyBrowserHandle(handle);
+        setIsReady(!!handle);
       }).catch(() => setIsReady(false));
     }
   }, []);
@@ -159,7 +193,9 @@ export function useFileStorage() {
         if (!selected) return false;
         const dir = typeof selected === "string" ? selected : (selected as string[])[0];
         await saveDir(dir);
-        setCustomDir(dir);
+        await addDirToHistory(dir);
+        if (!pastDirsRef.current.includes(dir)) pastDirsRef.current = [...pastDirsRef.current, dir];
+        applyCustomDir(dir);
         setIsReady(true);
         return true;
       } catch (err) {
@@ -171,7 +207,7 @@ export function useFileStorage() {
       try {
         const handle = await (window as DirectoryPickerWindow).showDirectoryPicker({ mode: "readwrite" });
         await saveBrowserHandle(handle);
-        setBrowserHandle(handle);
+        applyBrowserHandle(handle);
         setIsReady(true);
         return true;
       } catch (err) {
@@ -184,14 +220,52 @@ export function useFileStorage() {
   const clearDirectory = useCallback(async () => {
     if (isTauri()) {
       await clearDir();
-      setCustomDir(null);
+      applyCustomDir(null);
       setIsReady(true); // falls back to the app's own folder, which is always available
     } else {
       await clearBrowserHandle();
-      setBrowserHandle(null);
+      applyBrowserHandle(null);
       setIsReady(false);
     }
   }, []);
+
+  /**
+   * Makes sure there is somewhere to save files, asking for a folder when needed.
+   * Call it first thing after a click: the browser only grants folder access during a user gesture.
+   */
+  const ensureReady = useCallback(async (): Promise<boolean> => {
+    if (!isSupported) return false;
+    if (isTauri()) {
+      if (isReady) return true;
+    } else if (browserHandleRef.current) {
+      if (await verifyBrowserPermission(browserHandleRef.current)) return true;
+    }
+    toast.info("Please choose a folder to save your files");
+    return pickDirectory();
+  }, [isSupported, isReady, pickDirectory]);
+
+  /** Tauri: the places a stored file may live, newest first (current folder, earlier folders, app folder). */
+  const tauriLocations = (filePath: string) => {
+    const dirs = [customDirRef.current, ...[...pastDirsRef.current].reverse()]
+      .filter((d, i, all): d is string => !!d && all.indexOf(d) === i);
+    return [
+      ...dirs.map((d) => ({ path: `${d}/${filePath}`, opts: undefined as object | undefined })),
+      { path: `files/${filePath}`, opts: "appdata" as const },
+    ];
+  };
+
+  const withBase = async (opts: object | undefined | "appdata") =>
+    opts === "appdata" ? { baseDir: await getBaseDir() } : opts;
+
+  const browserFile = async (filePath: string) => {
+    const handle = browserHandleRef.current;
+    if (!handle || !(await verifyBrowserPermission(handle))) return null;
+    const parts = filePath.split("/");
+    const fileName = parts.pop()!;
+    let dir: FileSystemDirectoryHandle = handle;
+    for (const part of parts) dir = await dir.getDirectoryHandle(part);
+    return { dir, fileName };
+  };
 
   const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
     let bytes: Uint8Array;
@@ -204,26 +278,26 @@ export function useFileStorage() {
 
     if (isTauri()) {
       try {
-        if (customDir) {
-          const fullPath = `${customDir}/${filePath}`;
-          const parts = fullPath.split("/"); parts.pop();
-          const dirPath = parts.join("/");
-          if (!(await tauriExists(dirPath))) await tauriMkdir(dirPath, { recursive: true });
+        const dir = customDirRef.current;
+        if (dir) {
+          const fullPath = `${dir}/${filePath}`;
+          const parent = fullPath.split("/").slice(0, -1).join("/");
+          if (!(await tauriExists(parent))) await tauriMkdir(parent, { recursive: true });
           await tauriWriteFile(fullPath, bytes);
         } else {
           const base = await getBaseDir();
-          const dirPath = `files/${filePath}`.split("/").slice(0, -1).join("/");
-          if (dirPath && !(await tauriExists(dirPath, { baseDir: base })))
-            await tauriMkdir(dirPath, { baseDir: base, recursive: true });
+          const parent = `files/${filePath}`.split("/").slice(0, -1).join("/");
+          if (parent && !(await tauriExists(parent, { baseDir: base })))
+            await tauriMkdir(parent, { baseDir: base, recursive: true });
           await tauriWriteFile(`files/${filePath}`, bytes, { baseDir: base });
         }
         return true;
       } catch (err) { console.error("saveFile error:", err); return false; }
     } else {
-      if (!browserHandle) return false;
+      const handle = browserHandleRef.current;
+      if (!handle) return false;
       try {
-        const handle = await verifyBrowserPermission(browserHandle) ? browserHandle : null;
-        if (!handle) return false;
+        if (!(await verifyBrowserPermission(handle))) return false;
         const parts = filePath.split("/");
         const fileName = parts.pop()!;
         let dir: FileSystemDirectoryHandle = handle;
@@ -235,7 +309,7 @@ export function useFileStorage() {
         return true;
       } catch (err) { console.error("saveFile browser error:", err); return false; }
     }
-  }, [customDir, browserHandle]);
+  }, []);
 
   const readFileAsUrl = useCallback(async (filePath: string): Promise<string | null> => {
     const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
@@ -247,65 +321,45 @@ export function useFileStorage() {
       : "application/octet-stream";
 
     if (isTauri()) {
-      try {
-        let bytes: Uint8Array | null = null;
-        if (customDir) {
-          try { bytes = await tauriReadFile(`${customDir}/${filePath}`); } catch { /* try the app folder below */ }
-        }
-        // Files saved before a custom folder was chosen stay in the app's own folder
-        if (!bytes) {
-          const base = await getBaseDir();
-          bytes = await tauriReadFile(`files/${filePath}`, { baseDir: base });
-        }
-        return URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer as ArrayBuffer)], { type: mime }));
-      } catch { return null; }
-    } else {
-      if (!browserHandle) return null;
-      try {
-        // A handle restored after a reload needs permission again
-        if (!(await verifyBrowserPermission(browserHandle))) return null;
-        const parts = filePath.split("/");
-        const fileName = parts.pop()!;
-        let dir: FileSystemDirectoryHandle = browserHandle;
-        for (const part of parts) dir = await dir.getDirectoryHandle(part);
-        const fh = await dir.getFileHandle(fileName);
-        const file = await fh.getFile();
-        return URL.createObjectURL(file);
-      } catch { return null; }
+      for (const loc of tauriLocations(filePath)) {
+        try {
+          const bytes = await tauriReadFile(loc.path, await withBase(loc.opts));
+          return URL.createObjectURL(new Blob([new Uint8Array(bytes.buffer as ArrayBuffer)], { type: mime }));
+        } catch { /* try the next location */ }
+      }
+      return null;
     }
-  }, [customDir, browserHandle]);
+    try {
+      const found = await browserFile(filePath);
+      if (!found) return null;
+      const file = await (await found.dir.getFileHandle(found.fileName)).getFile();
+      return URL.createObjectURL(file);
+    } catch { return null; }
+  }, []);
 
   const deleteFile = useCallback(async (filePath: string): Promise<boolean> => {
-    if (isTauri()) {
-      try {
-        if (customDir) {
-          await tauriRemove(`${customDir}/${filePath}`);
-        } else {
-          const base = await getBaseDir();
-          await tauriRemove(`files/${filePath}`, { baseDir: base });
-        }
-        return true;
-      } catch { return false; }
-    } else {
-      if (!browserHandle) return false;
-      try {
-        if (!(await verifyBrowserPermission(browserHandle))) return false;
-        const parts = filePath.split("/");
-        const fileName = parts.pop()!;
-        let dir: FileSystemDirectoryHandle = browserHandle;
-        for (const part of parts) dir = await dir.getDirectoryHandle(part);
-        await dir.removeEntry(fileName);
-        return true;
-      } catch { return false; }
+    if (!isAppFilePath(filePath)) {
+      console.warn("Refusing to delete a file the app didn't create:", filePath);
+      return false;
     }
-  }, [customDir, browserHandle]);
-
-  /** Makes sure there is somewhere to save files, asking for a folder when needed. */
-  const ensureReady = useCallback(async (): Promise<boolean> => {
-    if (!isSupported) return false;
-    if (isReady) return true;
-    return pickDirectory();
-  }, [isSupported, isReady, pickDirectory]);
+    if (isTauri()) {
+      for (const loc of tauriLocations(filePath)) {
+        try {
+          const opts = await withBase(loc.opts);
+          if (!(await tauriExists(loc.path, opts))) continue;
+          await tauriRemove(loc.path, opts);
+          return true;
+        } catch { /* try the next location */ }
+      }
+      return false;
+    }
+    try {
+      const found = await browserFile(filePath);
+      if (!found) return false;
+      await found.dir.removeEntry(found.fileName);
+      return true;
+    } catch { return false; }
+  }, []);
 
   const hasCustomFolder = isTauri() ? customDir !== null : browserHandle !== null;
 

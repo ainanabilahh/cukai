@@ -1,4 +1,5 @@
 import { CATEGORIES, Deduction, DeductionCategory } from "@/lib/deduction-data";
+import { isAppFilePath } from "@/hooks/useFileStorage";
 
 /** Checks rows from an exported JSON file; returns the valid ones and how many were skipped. */
 export function parseImportedDeductions(data: unknown): { items: Omit<Deduction, "id">[]; skipped: number } {
@@ -26,7 +27,8 @@ export function parseImportedDeductions(data: unknown): { items: Omit<Deduction,
       description: r.description as string,
       frequency: r.frequency as Deduction["frequency"],
       month: (r.month as string | null) ?? undefined,
-      receiptImages: r.receiptImages as string[] | undefined,
+      // Keep only inline receipts and file names the app creates, never arbitrary paths
+      receiptImages: (r.receiptImages as string[] | undefined)?.filter((x) => x.startsWith("data:") || isAppFilePath(x)),
     });
   }
   return { items, skipped };

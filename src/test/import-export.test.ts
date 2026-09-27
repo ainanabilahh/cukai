@@ -48,3 +48,24 @@ describe("shared limits fallback", () => {
     expect(resolveRates(sheet, 2026).shared).toEqual(BUILT_IN_RATES.shared);
   });
 });
+
+describe("file path safety", () => {
+  it("only treats app-created file names as deletable", async () => {
+    const { isAppFilePath } = await import("@/hooks/useFileStorage");
+    const id = "0b8f5a4e-3c2d-4e1f-9a7b-6c5d4e3f2a1b";
+    expect(isAppFilePath(`2025/receipts/receipt-${id}.png`)).toBe(true);
+    expect(isAppFilePath(`2025/ea-form/ea-form-${id}.pdf`)).toBe(true);
+    expect(isAppFilePath("Taxes2023/notes.docx")).toBe(false);
+    expect(isAppFilePath(`../receipt-${id}.jpg`)).toBe(false);
+    expect(isAppFilePath(`/Users/me/receipt-${id}.jpg`)).toBe(false);
+  });
+
+  it("drops receipt paths the app did not create on import", () => {
+    const id = "0b8f5a4e-3c2d-4e1f-9a7b-6c5d4e3f2a1b";
+    const { items } = parseImportedDeductions([{
+      category: "Lifestyle", amount: 1, date: "", description: "x", frequency: "yearly",
+      receiptImages: ["Taxes2023/notes.docx", `2025/receipts/receipt-${id}.jpg`, "data:image/png;base64,AA"],
+    }]);
+    expect(items[0].receiptImages).toEqual([`2025/receipts/receipt-${id}.jpg`, "data:image/png;base64,AA"]);
+  });
+});
