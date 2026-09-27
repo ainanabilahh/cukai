@@ -15,7 +15,7 @@ const ChartsPage = () => {
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
         <div className="container mx-auto flex items-center gap-3 px-4 py-5">
-          <Link to="/">
+          <Link to={`/?year=${year}`}>
             <Button variant="ghost" size="icon" className="h-9 w-9">
               <ArrowLeft className="h-5 w-5" />
             </Button>

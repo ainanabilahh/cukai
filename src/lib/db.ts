@@ -83,6 +83,20 @@ export async function setSetting(key: string, value: string): Promise<void> {
   );
 }
 
+/** True when any claim or form still refers to this stored file. */
+export async function isFileReferenced(filePath: string): Promise<boolean> {
+  const db = await getDb();
+  const quoted = `%${JSON.stringify(filePath)}%`; // receipt_images holds a JSON array of paths
+  const rows = await db.select<{ n: number }[]>(
+    `SELECT
+       (SELECT COUNT(*) FROM deductions WHERE receipt_images LIKE ?) +
+       (SELECT COUNT(*) FROM ea_forms WHERE file_name = ?) +
+       (SELECT COUNT(*) FROM be_forms WHERE file_name = ?) AS n`,
+    [quoted, filePath, filePath]
+  );
+  return Number(rows[0]?.n ?? 0) > 0;
+}
+
 /** Years of assessment that have claims or a BE form, newest first. */
 export async function getYearsWithData(): Promise<number[]> {
   const db = await getDb();

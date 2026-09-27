@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -21,7 +21,7 @@ import { DataImportExport } from "@/components/DataImportExport";
 import { PrintSummary } from "@/components/PrintSummary";
 import { useTaxRates } from "@/contexts/TaxRatesContext";
 import { capReliefs } from "@/lib/tax-rates";
-import { getYearsWithData } from "@/lib/db";
+import { getYearsWithData, isFileReferenced } from "@/lib/db";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
 
 const currentYear = new Date().getFullYear();
@@ -30,7 +30,10 @@ const BASE_YEARS = [currentYear, currentYear - 1];
 
 const Index = () => {
   const navigate = useNavigate();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
+  // The year lives in the URL so it survives going to Charts and back
+  const [searchParams, setSearchParams] = useSearchParams();
+  const selectedYear = Number(searchParams.get("year")) || currentYear;
+  const setSelectedYear = (y: number) => setSearchParams({ year: String(y) }, { replace: true });
   const {
     deductions,
     filteredDeductions,
@@ -53,7 +56,11 @@ const Index = () => {
     const receipts = deductions.find((d) => d.id === id)?.receiptImages ?? [];
     await deleteDeduction(id);
     // Remove the claim's receipt files too (inline data URLs live in the row itself)
-    await Promise.all(receipts.filter((r) => !r.startsWith("data:")).map((r) => fileStorage.deleteFile(r)));
+    // Skip files another claim still uses (e.g. after importing an export)
+    for (const r of receipts) {
+      if (r.startsWith("data:")) continue;
+      if (!(await isFileReferenced(r))) await fileStorage.deleteFile(r);
+    }
   };
 
   const [dataYears, setDataYears] = useState<number[]>([]);
@@ -96,7 +103,7 @@ const Index = () => {
           <div className="flex items-center gap-2">
             <StorageSettings />
             <ThemeToggle />
-            <AddDeductionDialog onAdd={addDeduction} checkDuplicate={checkDuplicate} />
+            <AddDeductionDialog onAdd={addDeduction} checkDuplicate={checkDuplicate} year={selectedYear} />
           </div>
         </div>
       </header>
@@ -157,10 +164,10 @@ const Index = () => {
                   deductions={filteredDeductions}
                   onDelete={(id) => { handleDelete(id).catch(() => toast.error("Couldn't delete the claim.")); }}
                   year={selectedYear}
-                  onAttachReceipt={(id, fileName) => {
+                  onAttachReceipt={async (id, fileName) => {
                     const existing = deductions.find(d => d.id === id);
                     const current = existing?.receiptImages || [];
-                    updateDeduction(id, { receiptImages: [...current, fileName] });
+                    await updateDeduction(id, { receiptImages: [...current, fileName] });
                   }}
                 />
               </CardContent>

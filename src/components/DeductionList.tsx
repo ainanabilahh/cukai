@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { useFileStorageContext } from "@/contexts/FileStorageContext";
+import { fileExtension } from "@/hooks/useFileStorage";
 import { ReceiptFolderDialog } from "@/components/ReceiptFolderDialog";
 import { toast } from "sonner";
 import { saveBlob } from "@/lib/download";
@@ -15,7 +16,7 @@ import { saveBlob } from "@/lib/download";
 interface Props {
   deductions: Deduction[];
   onDelete: (id: string) => void;
-  onAttachReceipt?: (id: string, receiptFileName: string) => void;
+  onAttachReceipt?: (id: string, receiptFileName: string) => Promise<void>;
   year: number;
 }
 
@@ -92,10 +93,8 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
   };
 
   const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isSupported) return false;
-    if (fileStorage.isReady) return true;
-    toast.info("Please choose a folder to save your files");
-    return await fileStorage.pickDirectory();
+    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
+    return fileStorage.ensureReady();
   };
 
   const handleAttachReceipt = async (deduction: Deduction, file: File) => {
@@ -121,8 +120,9 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     const reader = new FileReader();
     reader.onload = () => {
       const dataUrl = reader.result as string;
-      onAttachReceipt?.(deduction.id, dataUrl);
-      toast.success("Receipt attached!");
+      Promise.resolve(onAttachReceipt?.(deduction.id, dataUrl))
+        .then(() => toast.success("Receipt attached!"))
+        .catch(() => toast.error("Couldn't attach the receipt."));
     };
     reader.onerror = () => toast.error("Failed to read file");
     reader.readAsDataURL(file);
@@ -132,15 +132,21 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     if (!pendingReceipt) return;
     const { deduction, file } = pendingReceipt;
     const isImage = file.type.startsWith("image/");
-    const ext = isImage ? "jpg" : "pdf";
-    const receiptFileName = `receipt-${crypto.randomUUID()}.${ext}`;
+    const receiptFileName = `receipt-${crypto.randomUUID()}.${fileExtension(file)}`;
     const fullPath = `${year}/receipts/${folderName}/${receiptFileName}`;
     const saved = await fileStorage.saveFile(fullPath, file);
     if (!saved) {
       toast.error("Failed to save receipt");
       return;
     }
-    onAttachReceipt?.(deduction.id, fullPath);
+    try {
+      await onAttachReceipt?.(deduction.id, fullPath);
+    } catch (err) {
+      console.error("Couldn't attach receipt:", err);
+      await fileStorage.deleteFile(fullPath);
+      toast.error("Couldn't attach the receipt.");
+      return;
+    }
     toast.success("Receipt attached!");
     setPendingReceipt(null);
   };
