@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Upload, FileText, Trash2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,9 +15,14 @@ interface EAFormSectionProps {
 }
 
 export function EAFormSection({ year }: EAFormSectionProps) {
-  const { forms, addForm, deleteForm, employerNames } = useEAForms(year);
+  const { forms, addForm, deleteForm, employerNames, defaultEmployer } = useEAForms(year);
   const fileStorage = useFileStorageContext();
   const [employerName, setEmployerName] = useState("");
+  const [employerEdited, setEmployerEdited] = useState(false);
+  // Prefill with last year's employer until the user types something themselves
+  useEffect(() => {
+    if (!employerEdited && defaultEmployer) setEmployerName(defaultEmployer);
+  }, [defaultEmployer, employerEdited]);
   const [uploading, setUploading] = useState(false);
   const [viewingForm, setViewingForm] = useState<EAForm | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
@@ -68,7 +73,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
         fileName,
         fileType: isImage ? "image" : "pdf",
       });
-      setEmployerName("");
+      setEmployerEdited(false); // go back to the suggested employer for the next form
       toast.success("EA Form uploaded!");
     } catch (err) {
       console.error(`EA form upload failed:`, err);
@@ -126,7 +131,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
                 value={employerName}
                 list="employer-names"
                 autoComplete="off"
-                onChange={(e) => setEmployerName(e.target.value)}
+                onChange={(e) => { setEmployerEdited(true); setEmployerName(e.target.value); }}
               />
               <datalist id="employer-names">
                 {employerNames.map((name) => <option key={name} value={name} />)}

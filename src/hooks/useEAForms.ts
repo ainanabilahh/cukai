@@ -50,6 +50,18 @@ async function fetchEmployerNames(): Promise<string[]> {
   return rows.map((r) => r.employer_name);
 }
 
+/** Employer on the latest EA form from an earlier year, falling back to the most recent one. */
+async function fetchDefaultEmployer(year: number): Promise<string | null> {
+  const db = await getDb();
+  const rows = await db.select<{ employer_name: string }[]>(
+    `SELECT employer_name FROM ea_forms
+     ORDER BY (year IS NOT NULL AND year < ?) DESC, year DESC, uploaded_at DESC
+     LIMIT 1`,
+    [year]
+  );
+  return rows[0]?.employer_name ?? null;
+}
+
 export function useEAForms(year: number) {
   const [forms, setForms] = useState<EAForm[]>([]);
 
@@ -79,11 +91,12 @@ export function useEAForms(year: number) {
   }, []);
 
   const [employerNames, setEmployerNames] = useState<string[]>([]);
+  const [defaultEmployer, setDefaultEmployer] = useState<string | null>(null);
   useEffect(() => {
-    fetchEmployerNames()
-      .then(setEmployerNames)
+    Promise.all([fetchEmployerNames(), fetchDefaultEmployer(year)])
+      .then(([names, fallback]) => { setEmployerNames(names); setDefaultEmployer(fallback); })
       .catch((err) => console.error("Failed to load employer names:", err));
-  }, [forms]);
+  }, [forms, year]);
 
-  return { forms, addForm, deleteForm, employerNames };
+  return { forms, addForm, deleteForm, employerNames, defaultEmployer };
 }
