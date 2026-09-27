@@ -2,6 +2,8 @@
 pub fn run() {
   tauri::Builder::default()
     .plugin(tauri_plugin_fs::init())
+    // Remembers folders picked in the dialog so file access survives restarts
+    .plugin(tauri_plugin_persisted_scope::init())
     .plugin(tauri_plugin_dialog::init())
     .plugin(tauri_plugin_sql::Builder::new().build())
     .setup(|app| {

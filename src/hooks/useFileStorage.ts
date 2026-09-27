@@ -5,7 +5,8 @@ const isTauri = () => "__TAURI_INTERNALS__" in window;
 // ── Tauri imports (loaded lazily to avoid errors in browser) ──────────────────
 async function tauriOpen() {
   const { open } = await import("@tauri-apps/plugin-dialog");
-  return open({ directory: true, multiple: false, title: "Choose Storage Folder" });
+  // recursive: the picked folder and everything under it becomes readable and writable
+  return open({ directory: true, multiple: false, recursive: true, title: "Choose Storage Folder" });
 }
 
 async function tauriReadFile(path: string, opts?: object): Promise<Uint8Array> {

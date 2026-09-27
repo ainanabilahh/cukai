@@ -18,11 +18,7 @@
     "fs:allow-exists",
     "fs:allow-applocaldata-read-recursive",
     "fs:allow-applocaldata-write-recursive",
-    "fs:scope-home-recursive",
-    {
-      "identifier": "fs:scope",
-      "allow": [{ "path": "/Users/**" }]
-    },
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "dialog:allow-save"
   ]
 }
