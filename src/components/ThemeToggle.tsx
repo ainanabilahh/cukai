@@ -3,28 +3,19 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
 export function ThemeToggle() {
+  // Saved choice wins; otherwise dark (index.html starts with class="dark")
   const [dark, setDark] = useState(() => {
-    if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark");
-    }
-    return true;
+    try {
+      const saved = localStorage.getItem("theme");
+      if (saved) return saved === "dark";
+    } catch { /* storage unavailable */ }
+    return document.documentElement.classList.contains("dark");
   });
 
   useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
+    document.documentElement.classList.toggle("dark", dark);
+    try { localStorage.setItem("theme", dark ? "dark" : "light"); } catch { /* storage unavailable */ }
   }, [dark]);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "light") setDark(false);
-    else setDark(true);
-  }, []);
 
   return (
     <Button variant="ghost" size="icon" onClick={() => setDark(!dark)} aria-label="Toggle theme">
