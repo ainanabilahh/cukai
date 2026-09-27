@@ -171,9 +171,14 @@ export function useFileStorage() {
   useEffect(() => {
     if (isTauri()) {
       Promise.all([loadSavedDir(), loadDirHistory()])
-        .then(([dir, history]) => {
+        .then(async ([dir, history]) => {
           applyCustomDir(dir);
           pastDirsRef.current = history;
+          // Folders chosen before the history existed still need to be remembered
+          if (dir && !history.includes(dir)) {
+            pastDirsRef.current = [...history, dir];
+            await addDirToHistory(dir);
+          }
         })
         .catch((err) => console.error("Couldn't read the saved storage folder:", err))
         // The app's own folder always works, even if the custom one couldn't be read
@@ -235,13 +240,20 @@ export function useFileStorage() {
    */
   const ensureReady = useCallback(async (): Promise<boolean> => {
     if (!isSupported) return false;
-    if (isTauri()) {
-      if (isReady) return true;
-    } else if (browserHandleRef.current) {
-      if (await verifyBrowserPermission(browserHandleRef.current)) return true;
+    try {
+      if (isTauri()) {
+        if (isReady) return true;
+      } else if (browserHandleRef.current) {
+        if (await verifyBrowserPermission(browserHandleRef.current)) return true;
+      }
+      toast.info("Please choose a folder to save your files");
+      return await pickDirectory();
+    } catch (err) {
+      // e.g. the browser refused a permission prompt outside a click
+      console.error("Couldn't get access to the storage folder:", err);
+      toast.error("Couldn't access your storage folder. Open Settings and choose it again.");
+      return false;
     }
-    toast.info("Please choose a folder to save your files");
-    return pickDirectory();
   }, [isSupported, isReady, pickDirectory]);
 
   /** Tauri: the places a stored file may live, newest first (current folder, earlier folders, app folder). */
@@ -269,11 +281,13 @@ export function useFileStorage() {
 
   const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
     let bytes: Uint8Array;
-    if (typeof data === "string") {
-      const res = await fetch(data);
-      bytes = new Uint8Array(await res.arrayBuffer());
-    } else {
-      bytes = new Uint8Array(await data.arrayBuffer());
+    try {
+      bytes = typeof data === "string"
+        ? new Uint8Array(await (await fetch(data)).arrayBuffer())
+        : new Uint8Array(await data.arrayBuffer());
+    } catch (err) {
+      console.error("Couldn't read the file to save:", err);
+      return false;
     }
 
     if (isTauri()) {
