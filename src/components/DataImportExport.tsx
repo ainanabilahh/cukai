@@ -15,13 +15,6 @@ interface Props {
 export function DataImportExport({ deductions, year, onImport }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const exportJSON = () => {
-    const blob = new Blob([JSON.stringify(deductions, null, 2)], { type: "application/json" });
-    saveBlob(blob, `cukai-claims-${year}.json`)
-      .then((ok) => ok && toast.success("Exported as JSON"))
-      .catch(() => toast.error("Couldn't save the export."));
-  };
-
   const exportCSV = () => {
     // BOM so Excel reads the file as UTF-8
     const blob = new Blob(["\uFEFF" + deductionsToCsv(deductions)], { type: "text/csv" });
@@ -68,9 +61,6 @@ export function DataImportExport({ deductions, year, onImport }: Props) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      <Button variant="outline" size="sm" onClick={exportJSON} className="gap-1.5">
-        <Download className="h-3.5 w-3.5" /> JSON
-      </Button>
       <Button variant="outline" size="sm" onClick={exportCSV} className="gap-1.5">
         <Download className="h-3.5 w-3.5" /> CSV
       </Button>
