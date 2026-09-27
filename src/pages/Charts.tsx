@@ -8,7 +8,7 @@ const currentYear = new Date().getFullYear();
 
 const ChartsPage = () => {
   const [searchParams] = useSearchParams();
-  const year = parseInt(searchParams.get("year") || currentYear.toString());
+  const year = Number(searchParams.get("year")) || currentYear;
   const { deductions, totalByCategory } = useDeductions(year);
 
   return (

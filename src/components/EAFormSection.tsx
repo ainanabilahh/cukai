@@ -22,10 +22,6 @@ export function EAFormSection({ year }: EAFormSectionProps) {
   const [viewingForm, setViewingForm] = useState<EAForm | null>(null);
   const [viewUrl, setViewUrl] = useState<string | null>(null);
 
-  const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
-    return fileStorage.ensureReady();
-  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -46,7 +42,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
     }
 
     // Ensure storage folder is selected (one-time prompt)
-    const storageReady = await ensureStorage();
+    const storageReady = await fileStorage.ensureReady();
     if (!storageReady) {
       toast.error("Choose a storage folder in Settings to save your forms.");
       e.target.value = "";
@@ -54,6 +50,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
     }
     
     setUploading(true);
+    let savedPath: string | null = null;
     try {
       const id = crypto.randomUUID();
       const ext = fileExtension(file);
@@ -64,6 +61,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
         toast.error("Failed to save file to folder");
         return;
       }
+      savedPath = fileName;
 
       await addForm({
         employerName: employerName.trim(),
@@ -74,6 +72,7 @@ export function EAFormSection({ year }: EAFormSectionProps) {
       toast.success("EA Form uploaded!");
     } catch (err) {
       console.error(`EA form upload failed:`, err);
+      if (savedPath) await fileStorage.deleteFile(savedPath); // no record points at it
       toast.error("Failed to save the form. Please try again.");
     } finally {
       setUploading(false);

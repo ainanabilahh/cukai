@@ -21,10 +21,6 @@ export function BEFormSection({ year }: BEFormSectionProps) {
 
   const yearForms = forms.filter((f) => f.year === year);
 
-  const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
-    return fileStorage.ensureReady();
-  };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -40,7 +36,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
       return;
     }
 
-    const storageReady = await ensureStorage();
+    const storageReady = await fileStorage.ensureReady();
     if (!storageReady) {
       toast.error("Choose a storage folder in Settings to save your forms.");
       e.target.value = "";
@@ -48,6 +44,7 @@ export function BEFormSection({ year }: BEFormSectionProps) {
     }
 
     setUploading(true);
+    let savedPath: string | null = null;
     try {
       const id = crypto.randomUUID();
       const ext = fileExtension(file);
@@ -58,11 +55,13 @@ export function BEFormSection({ year }: BEFormSectionProps) {
         toast.error("Failed to save file to folder");
         return;
       }
+      savedPath = fileName;
 
       await addForm({ year, fileName, fileType: isImage ? "image" : "pdf" });
       toast.success("BE Form uploaded!");
     } catch (err) {
       console.error(`BE form upload failed:`, err);
+      if (savedPath) await fileStorage.deleteFile(savedPath); // no record points at it
       toast.error("Failed to save the form. Please try again.");
     } finally {
       setUploading(false);

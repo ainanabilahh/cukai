@@ -24,19 +24,22 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
   const fileStorage = useFileStorageContext();
   const { limits } = useTaxRates(year);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [viewingReceipt, setViewingReceipt] = useState<{ urls: { url: string; type: string }[]; currentIndex: number; deduction: Deduction } | null>(null);
+  const [viewingReceipt, setViewingReceipt] = useState<{ urls: { url: string; type: string; ext: string }[]; currentIndex: number; deduction: Deduction } | null>(null);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [pendingReceipt, setPendingReceipt] = useState<{ deduction: Deduction; file: File } | null>(null);
 
-  const resolveReceiptUrl = async (fileName: string): Promise<{ url: string; type: string } | null> => {
+  const resolveReceiptUrl = async (fileName: string): Promise<{ url: string; type: string; ext: string } | null> => {
     if (fileName.startsWith("data:")) {
-      return { url: fileName, type: fileName.startsWith("data:application/pdf") ? "pdf" : "image" };
+      const mime = fileName.slice(5, fileName.indexOf(";"));
+      const ext = mime === "application/pdf" ? "pdf" : (mime.split("/")[1] || "jpg").replace("jpeg", "jpg");
+      return { url: fileName, type: ext === "pdf" ? "pdf" : "image", ext };
     }
     if (fileStorage.isReady) {
       const url = await fileStorage.readFile(fileName);
       if (url) {
-        return { url, type: fileName.endsWith(".pdf") ? "pdf" : "image" };
+        const ext = fileName.split(".").pop()?.toLowerCase() || "jpg";
+        return { url, type: ext === "pdf" ? "pdf" : "image", ext };
       }
     }
     return null;
@@ -46,7 +49,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     const images = deduction.receiptImages || [];
     if (images.length === 0) return;
 
-    const resolved: { url: string; type: string }[] = [];
+    const resolved: { url: string; type: string; ext: string }[] = [];
     for (const img of images) {
       const result = await resolveReceiptUrl(img);
       if (result) resolved.push(result);
@@ -76,7 +79,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
   const handleDownload = () => {
     if (!viewingReceipt) return;
     const current = viewingReceipt.urls[viewingReceipt.currentIndex];
-    const ext = current.type === "pdf" ? "pdf" : "jpg";
+    const ext = current.ext;
     fetch(current.url)
       .then((res) => res.blob())
       .then((blob) => saveBlob(blob, `receipt-${viewingReceipt.currentIndex + 1}.${ext}`))
@@ -92,10 +95,6 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     setRotation(0);
   };
 
-  const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
-    return fileStorage.ensureReady();
-  };
 
   const handleAttachReceipt = async (deduction: Deduction, file: File) => {
     const isImage = file.type.startsWith("image/");
@@ -110,7 +109,7 @@ export function DeductionList({ deductions, onDelete, onAttachReceipt, year }: P
     }
 
     // Try file system storage - show folder dialog
-    const storageReady = await ensureStorage();
+    const storageReady = await fileStorage.ensureReady();
     if (storageReady) {
       setPendingReceipt({ deduction, file });
       return;

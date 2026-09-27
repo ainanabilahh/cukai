@@ -44,10 +44,6 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
     setMonth(MONTHS[d.getMonth()]);
   };
 
-  const ensureStorage = async (): Promise<boolean> => {
-    if (!fileStorage.isReady && fileStorage.isSupported) toast.info("Please choose a folder to save your files");
-    return fileStorage.ensureReady();
-  };
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -112,7 +108,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
     const savedFileNames: string[] = [];
 
     if (receiptFiles.length > 0) {
-      const storageReady = await ensureStorage();
+      const storageReady = await fileStorage.ensureReady();
       if (storageReady) {
         for (const receipt of receiptFiles) {
           const id = crypto.randomUUID();
@@ -184,6 +180,10 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
       toast.error("Please select a month");
       return;
     }
+    if (frequency === "monthly" && date.getFullYear() !== year) {
+      toast.error(`The date must be in ${year}, the year of assessment you're adding to.`);
+      return;
+    }
     if (checkDuplicate && checkDuplicate({ category, amount: num, date: storedDate, description: description.trim() })) {
       setShowDupeWarning(true);
       return;
@@ -192,7 +192,12 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
   };
 
   return (
-    <Dialog open={open} onOpenChange={(v) => { setOpen(v); if (!v) clearAllReceipts(); }}>
+    <Dialog open={open} onOpenChange={(v) => {
+      setOpen(v);
+      if (!v) clearAllReceipts();
+      // Start the date inside the selected year of assessment
+      else if (date.getFullYear() !== year) handleDateChange(year === new Date().getFullYear() ? new Date() : new Date(year, 11, 31));
+    }}>
       <DialogTrigger asChild>
         <Button className="gap-2 font-display font-semibold">
           <Plus className="h-4 w-4" />
@@ -319,7 +324,7 @@ export function AddDeductionDialog({ onAdd, checkDuplicate, year }: Props) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={(d) => d && handleDateChange(d)} initialFocus className="p-3 pointer-events-auto" />
+                  <Calendar mode="single" selected={date} onSelect={(d) => d && handleDateChange(d)} defaultMonth={date} fromYear={year} toYear={year} disabled={(d) => d.getFullYear() !== year} initialFocus className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
             </div>
