@@ -14,7 +14,7 @@ interface EAFormSectionProps {
 }
 
 export function EAFormSection({ year }: EAFormSectionProps) {
-  const { forms, addForm, deleteForm } = useEAForms();
+  const { forms, addForm, deleteForm } = useEAForms(year);
   const fileStorage = useFileStorageContext();
   const [employerName, setEmployerName] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -48,6 +48,11 @@ export function EAFormSection({ year }: EAFormSectionProps) {
 
     // Ensure storage folder is selected (one-time prompt)
     const storageReady = await ensureStorage();
+    if (!storageReady) {
+      toast.error("Choose a storage folder in Settings to save your forms.");
+      e.target.value = "";
+      return;
+    }
     
     setUploading(true);
     try {
@@ -55,23 +60,22 @@ export function EAFormSection({ year }: EAFormSectionProps) {
       const ext = isImage ? "jpg" : "pdf";
       const fileName = `${year}/ea-form/ea-form-${id}.${ext}`;
 
-      if (storageReady) {
-        const saved = await fileStorage.saveFile(fileName, file);
-        if (!saved) {
-          toast.error("Failed to save file to folder");
-          return;
-        }
+      const saved = await fileStorage.saveFile(fileName, file);
+      if (!saved) {
+        toast.error("Failed to save file to folder");
+        return;
       }
 
-      addForm({
+      await addForm({
         employerName: employerName.trim(),
         fileName,
         fileType: isImage ? "image" : "pdf",
       });
       setEmployerName("");
       toast.success("EA Form uploaded!");
-    } catch {
-      toast.error("Failed to process file");
+    } catch (err) {
+      console.error(`EA form upload failed:`, err);
+      toast.error("Failed to save the form. Please try again.");
     } finally {
       setUploading(false);
       e.target.value = "";

@@ -42,6 +42,11 @@ export function BEFormSection({ year }: BEFormSectionProps) {
     }
 
     const storageReady = await ensureStorage();
+    if (!storageReady) {
+      toast.error("Choose a storage folder in Settings to save your forms.");
+      e.target.value = "";
+      return;
+    }
 
     setUploading(true);
     try {
@@ -49,18 +54,17 @@ export function BEFormSection({ year }: BEFormSectionProps) {
       const ext = isImage ? "jpg" : "pdf";
       const fileName = `${year}/be-form/be-form-${id}.${ext}`;
 
-      if (storageReady) {
-        const saved = await fileStorage.saveFile(fileName, file);
-        if (!saved) {
-          toast.error("Failed to save file to folder");
-          return;
-        }
+      const saved = await fileStorage.saveFile(fileName, file);
+      if (!saved) {
+        toast.error("Failed to save file to folder");
+        return;
       }
 
-      addForm({ year, fileName, fileType: isImage ? "image" : "pdf" });
+      await addForm({ year, fileName, fileType: isImage ? "image" : "pdf" });
       toast.success("BE Form uploaded!");
-    } catch {
-      toast.error("Failed to process file");
+    } catch (err) {
+      console.error(`BE form upload failed:`, err);
+      toast.error("Failed to save the form. Please try again.");
     } finally {
       setUploading(false);
       e.target.value = "";
