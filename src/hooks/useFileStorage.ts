@@ -104,10 +104,20 @@ async function clearBrowserHandle() {
   });
 }
 
+// File System Access API members not yet in TypeScript's DOM types
+type PermissionedHandle = FileSystemDirectoryHandle & {
+  queryPermission(opts: { mode: "readwrite" }): Promise<PermissionState>;
+  requestPermission(opts: { mode: "readwrite" }): Promise<PermissionState>;
+};
+type DirectoryPickerWindow = Window & {
+  showDirectoryPicker(opts: { mode: "readwrite" }): Promise<FileSystemDirectoryHandle>;
+};
+
 async function verifyBrowserPermission(handle: FileSystemDirectoryHandle): Promise<boolean> {
   const opts = { mode: "readwrite" as const };
-  if ((await (handle as any).queryPermission(opts)) === "granted") return true;
-  if ((await (handle as any).requestPermission(opts)) === "granted") return true;
+  const h = handle as PermissionedHandle;
+  if ((await h.queryPermission(opts)) === "granted") return true;
+  if ((await h.requestPermission(opts)) === "granted") return true;
   return false;
 }
 
@@ -146,13 +156,13 @@ export function useFileStorage() {
     } else {
       if (!("showDirectoryPicker" in window)) return false;
       try {
-        const handle = await (window as any).showDirectoryPicker({ mode: "readwrite" });
+        const handle = await (window as DirectoryPickerWindow).showDirectoryPicker({ mode: "readwrite" });
         await saveBrowserHandle(handle);
         setBrowserHandle(handle);
         setIsReady(true);
         return true;
-      } catch (err: any) {
-        if (err.name !== "AbortError") console.error("Browser folder picker error:", err);
+      } catch (err) {
+        if ((err as Error).name !== "AbortError") console.error("Browser folder picker error:", err);
         return false;
       }
     }
@@ -162,11 +172,12 @@ export function useFileStorage() {
     if (isTauri()) {
       await clearDir();
       setCustomDir(null);
+      setIsReady(true); // falls back to the app's own folder, which is always available
     } else {
       await clearBrowserHandle();
       setBrowserHandle(null);
+      setIsReady(false);
     }
-    setIsReady(false);
   }, []);
 
   const saveFile = useCallback(async (filePath: string, data: Blob | string): Promise<boolean> => {
@@ -234,6 +245,8 @@ export function useFileStorage() {
     } else {
       if (!browserHandle) return null;
       try {
+        // A handle restored after a reload needs permission again
+        if (!(await verifyBrowserPermission(browserHandle))) return null;
         const parts = filePath.split("/");
         const fileName = parts.pop()!;
         let dir: FileSystemDirectoryHandle = browserHandle;
@@ -259,6 +272,7 @@ export function useFileStorage() {
     } else {
       if (!browserHandle) return false;
       try {
+        if (!(await verifyBrowserPermission(browserHandle))) return false;
         const parts = filePath.split("/");
         const fileName = parts.pop()!;
         let dir: FileSystemDirectoryHandle = browserHandle;
