@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { Deduction, DeductionCategory } from "@/lib/deduction-data";
 import { getDb } from "@/lib/db";
 
@@ -40,6 +40,9 @@ export function useDeductions(year: number) {
   const [deductions, setDeductions] = useState<Deduction[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<DeductionCategory | "all">("all");
+
+  const yearRef = useRef(year);
+  yearRef.current = year;
 
   useEffect(() => {
     // Ignore a response for a year the user has already switched away from
@@ -99,7 +102,8 @@ export function useDeductions(year: number) {
     } catch (err) {
       console.error("Import stopped after", saved, "rows:", err);
     }
-    setDeductions(await fetchDeductions(year));
+    const fresh = await fetchDeductions(year);
+    if (yearRef.current === year) setDeductions(fresh);
     return saved;
   }, [year]);
 

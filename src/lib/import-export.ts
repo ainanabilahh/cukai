@@ -12,7 +12,8 @@ export function parseImportedDeductions(data: unknown): { items: Omit<Deduction,
       r && typeof r === "object" &&
       CATEGORIES.includes(r.category as DeductionCategory) &&
       Number.isFinite(amount) && amount >= 0 &&
-      typeof r.date === "string" && r.date.trim() !== "" &&
+      typeof r.date === "string" && // yearly claims have an empty date
+
       typeof r.description === "string" &&
       (r.frequency === "yearly" || r.frequency === "monthly") &&
       (r.month === undefined || r.month === null || typeof r.month === "string") &&
